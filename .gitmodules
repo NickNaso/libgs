@@ -1,0 +1,3 @@
+[submodule "ghostpdl"]
+	path = ghostpdl
+	url = git@github.com:ArtifexSoftware/ghostpdl.git
