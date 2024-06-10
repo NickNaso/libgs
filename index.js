@@ -6,9 +6,10 @@ const { Readable } = require('node:stream');
 const tar = require('tar');
 const { spawn } = require('node:child_process');
 
-const gsRelease = 'gs10031'
-const gsDownloadFile = 'ghostpdl-10.03.1.tar.gz'
-const gsDownload = `https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/${gsRelease}/${gsDownloadFile}`;
+let version = "10.03.1";
+let gsRelease = `gs${version.replace(/\./g, '')}`;
+let gsDownloadFile = `ghostpdl-${version}.tar.gz`;
+let gsDownload = `https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/${gsRelease}/${gsDownloadFile}`;
 const ghostpdlFolder = 'ghostpdl'
 
 async function downloadFile(url, filePath) {
@@ -69,6 +70,20 @@ async function runCommand(command, args, options) {
 
 async function main() {
   try {
+    process.argv.forEach((val, index) => {
+      // process.stdout.write(`${index}: ${val} \n`);
+      if (val === '--release' || val === '-r') {
+        if (!process.argv[index + 1]) throw "missing version parameter"
+        if (!process.argv[index + 1].match(/^\d+.\d+.\d+$/)) throw "invalid version parameter"
+
+        version = process.argv[index + 1];
+        gsRelease = `gs${version.replace(/\./g, '')}`;
+        gsDownloadFile = `ghostpdl-${version}.tar.gz`;
+        gsDownload = `https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/${gsRelease}/${gsDownloadFile}`;
+
+      }
+    })
+
     await unlink(gsDownloadFile).catch(() => {});
     await rm('ghostpdl', { recursive: true, force: true }).catch(() => {});
 
