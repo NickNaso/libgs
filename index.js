@@ -39,6 +39,21 @@ async function main() {
       
       configure.on('close', (code) => {
         console.log(`bla bla bla${code}`);
+        if (code ===0) {
+            const make = spawn('sh', ['make libgs'], {cwd: ghostpdlFolder})
+            make.stdout.on('data', (data) => {
+                process.stdout.write(`${data}`);
+                // console.log(`${data}`);
+              });
+              
+              make.stderr.on('data', (data) => {
+                console.error(`${data}`);
+              });
+              
+              make.on('close', (code) => {
+                console.log(`bla bla bla${code}`);
+              });
+        }
       });
 }
 
