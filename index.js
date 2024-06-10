@@ -5,10 +5,24 @@ const { unlink, mkdir, rm } = require('node:fs/promises');
 const { Readable } = require('node:stream');
 const tar = require('tar');
 const { spawn } = require('node:child_process');
+const { parseArgs } = require('node:util');
 
-const gsRelease = 'gs10031'
-const gsDownloadFile = 'ghostpdl-10.03.1.tar.gz'
-const gsDownload = `https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/${gsRelease}/${gsDownloadFile}`;
+const options = {
+  release: {
+    type: 'string',
+    description: 'Release version',
+    short: 'r',
+    long: 'release',
+  }
+}
+const { values, positionals } = parseArgs({
+  options: options,
+  strict: true,
+});
+
+let gsRelease = `gs10031`;
+let gsDownloadFile = `ghostpdl-10.03.1.tar.gz`;
+let gsDownload = `https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/${gsRelease}/${gsDownloadFile}`;
 const ghostpdlFolder = 'ghostpdl'
 
 async function downloadFile(url, filePath) {
@@ -69,6 +83,12 @@ async function runCommand(command, args, options) {
 
 async function main() {
   try {
+    if (values.release) {
+      gsRelease = `gs${values.release.replace(/\./g, '')}`;
+      gsDownloadFile = `ghostpdl-${values.release}.tar.gz`;
+      gsDownload = `https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/${gsRelease}/${gsDownloadFile}`;
+    }
+
     await unlink(gsDownloadFile).catch(() => {});
     await rm('ghostpdl', { recursive: true, force: true }).catch(() => {});
 
