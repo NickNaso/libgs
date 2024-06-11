@@ -75,7 +75,7 @@ async function runCommand(command, args, options) {
       process.stderr.write(`${data}`)
     });
     childProcess.on('close', (code) => {
-      if (code !== 0) reject(new Error(`${command} exited with code ${code}: ${stderr}`));
+      if (code !== 0) reject(new Error(`${command} exited with code ${code}`));
       resolve();
     });
   });

@@ -2,8 +2,16 @@ name: 'Auto Builder'
 on: [push, pull_request]
 
 jobs:
-    build:
+    build-linux:
         runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+            - name: 'Auto Builder'
+              run: |
+                  npm install
+                  npm start
+    build-macos:
+        runs-on: macos-latest
         steps:
             - uses: actions/checkout@v2
             - name: 'Auto Builder'
