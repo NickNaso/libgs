@@ -40,6 +40,7 @@ jobs:
               with:
                 node-version: ${{ matrix.node-version }}
                 cache: 'npm'
+                cache-dependency-path: package.json
                 
             - name: Install Node.js modules ...
               run: npm install
