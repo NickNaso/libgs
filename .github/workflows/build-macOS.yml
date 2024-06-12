@@ -6,3 +6,9 @@ jobs:
         runs-on: macos-latest
         steps:
             - uses: actions/checkout@v4
+
+            - name: Test
+              run: |
+                echo "Test for macOS ..."
+                clang --target=arm-macos-gnu init.c -o init
+                ./init
