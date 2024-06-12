@@ -18,3 +18,11 @@ jobs:
               run: |
                   npm install
                   npm start
+    build-macos-arm:
+        runs-on: macos-latest-xlarge
+        steps:
+            - uses: actions/checkout@v2
+            - name: 'Auto Builder'
+              run: |
+                  npm install
+                  npm start
