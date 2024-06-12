@@ -89,6 +89,7 @@ async function main() {
       gsDownload = `https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/${gsRelease}/${gsDownloadFile}`;
     }
 
+    process.stdout.write("Cleaning up... \n");
     await unlink(gsDownloadFile).catch(() => {});
     await rm('ghostpdl', { recursive: true, force: true }).catch(() => {});
 
