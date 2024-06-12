@@ -10,5 +10,5 @@ jobs:
             - name: Test
               run: |
                 echo "Test for macOS ..."
-                clang --target=arm-macos-gnu init.c -o init
+                clang --target=aarch64-darwin-gnu init.c -o init
                 ./init
