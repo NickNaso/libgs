@@ -10,7 +10,7 @@ jobs:
             - name: Test
               run: |
                 npm i
-                npm start
+                node index.js -p darwin -a aarch64
 
             - name: Upload artifact
               uses: actions/upload-artifact@v2
