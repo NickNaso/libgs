@@ -8,41 +8,6 @@ const { spawn } = require('node:child_process');
 const { parseArgs } = require('node:util');
 const  os  = require('os')
 
-const options = {
-  release: {
-    type: 'string',
-    description: 'Release version',
-    short: 'r',
-    long: 'release',
-  },
-  arch: {
-    type: 'string',
-    description: 'Architecture',
-    short: 'a',
-    long: 'arch',
-  },
-  platform: {
-    type: 'string',
-    description: 'Platform',
-    short: 'p',
-    long: 'platform',
-  }
-}
-const { values, positionals } = parseArgs({
-  options: options,
-  strict: true,
-});
-
-let gsRelease = `gs10031`;
-let gsDownloadFile = `ghostpdl-10.03.1.tar.gz`;
-let gsDownload = `https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/${gsRelease}/${gsDownloadFile}`;
-const ghostpdlFolder = 'ghostpdl'
-
-let targetArch;
-let targetPlatform;
-values.platform ? targetPlatform = values.platform : targetPlatform = (os.platform());
-values.arch ? targetArch = values.arch : targetArch = os.arch();
-
 async function downloadFile(url, filePath) {
   try {
     const res = await fetch(url);
@@ -101,6 +66,43 @@ async function runCommand(command, args, options) {
 
 async function main() {
   try {
+
+    const options = {
+      release: {
+        type: 'string',
+        description: 'Release version',
+        short: 'r',
+        long: 'release',
+      },
+      arch: {
+        type: 'string',
+        description: 'Architecture',
+        short: 'a',
+        long: 'arch',
+      },
+      platform: {
+        type: 'string',
+        description: 'Platform',
+        short: 'p',
+        long: 'platform',
+      }
+    }
+
+    const { values } = parseArgs({
+      options: options,
+      strict: true,
+    });
+
+    let gsRelease = `gs10031`;
+    let gsDownloadFile = `ghostpdl-10.03.1.tar.gz`;
+    let gsDownload = `https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/${gsRelease}/${gsDownloadFile}`;
+    const ghostpdlFolder = 'ghostpdl'
+
+    let targetArch;
+    let targetPlatform;
+    values.platform ? targetPlatform = values.platform : targetPlatform = (os.platform());
+    values.arch ? targetArch = values.arch : targetArch = os.arch();
+ 
     if (values.release) {
       gsRelease = `gs${values.release.replace(/\./g, '')}`;
       gsDownloadFile = `ghostpdl-${values.release}.tar.gz`;
@@ -119,7 +121,9 @@ async function main() {
     await extractTarGz(gsDownloadFile, ghostpdlFolder);
 
     process.stdout.write(`Configuring... \n`);
-    process.env.CFLAGS = `--target=${targetArch}-${targetPlatform}-gnu`;
+    if(targetPlatform === 'darwin' && targetArch === 'arm64') 
+      process.env.CFLAGS = `--target=${targetArch}-${targetPlatform}-gnu`;
+   
     await runCommand('sh', ['./configure' ], { cwd: ghostpdlFolder });
 
     process.stdout.write(`Building... \n`);
