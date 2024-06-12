@@ -1,0 +1,8 @@
+name: 'Build for macOS'
+on: [push, pull_request]
+
+jobs:
+    build-macos:
+        runs-on: macos-latest
+        steps:
+            - uses: actions/checkout@v4
