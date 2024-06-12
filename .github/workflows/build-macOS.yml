@@ -9,12 +9,8 @@ jobs:
 
             - name: Test
               run: |
-                echo "Test for macOS ..."
-                curl https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs10031/ghostpdl-10.03.1.tar.gz -O -L
-                tar -xvf ghostpdl-10.03.1.tar.gz
-                cd ghostpdl-10.03.1
-                CFLAGS+=--target=aarch64-darwin-gnu ./configure
-                make libgs
+                npm i
+                npm start
 
             - name: Upload artifact
               uses: actions/upload-artifact@v2
