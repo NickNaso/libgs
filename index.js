@@ -7,7 +7,6 @@ const tar = require('tar');
 const { spawn } = require('node:child_process');
 const { parseArgs } = require('node:util');
 const  os  = require('os');
-const fs = require("fs").promises;
 
 async function downloadFile(url, filePath) {
   try {
@@ -127,15 +126,16 @@ async function main() {
       process.env.CFLAGS = `--target=${targetArch}-${targetPlatform}-gnu`;
     if(targetPlatform === 'windows'){
       args.push('--without-tesseract');
-      await fs.rename('C:\\\\msys64\\mingw64\\include', 'C:\\\\msys64\\mingw64\\include-old', (err) => { 
-        console.log(err);
-       });
-       process.env.CLFAGS += '-fcommon'
+      
     }
     await runCommand('sh', args, { cwd: ghostpdlFolder });
 
     process.stdout.write(`Building... \n`);
-    await runCommand('make', ['libgs'], { cwd: ghostpdlFolder });
+    if(targetPlatform==='windows'){
+      await runCommand('nmake', ['-f','psi\\msvc.mak'], { cwd: ghostpdlFolder });
+    }else{
+      await runCommand('make', ['libgs'], { cwd: ghostpdlFolder });
+    }
 
     process.stdout.write(`Done.\n`);
   } catch (error) {
