@@ -125,7 +125,7 @@ async function main() {
     let args = ['./configure' ];
     if(targetPlatform === 'darwin' && targetArch === 'arm64') 
       process.env.CFLAGS = `--target=${targetArch}-${targetPlatform}-gnu`;
-    if(targetPlatform === 'mingw64'){
+    if(targetPlatform === 'win64'){
       args.push('--without-tesseract');
       process.env.CFLAGS = `--target=${targetArch}-${targetPlatform}-gnu`;
     }
