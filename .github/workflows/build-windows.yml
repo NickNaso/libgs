@@ -50,8 +50,9 @@ jobs:
             - name: Environment information
               run: npx envinfo
 
-            - name: Build
-              run: |
-                node index.js -a x86_64 -p windows 
+            - name: Setup C/C++ Compiler
+              uses: rlalik/setup-cpp-compiler@v1.2
 
+            - name: Build
+              run:  node index.js -p windows -a x64
             
