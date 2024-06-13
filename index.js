@@ -6,7 +6,8 @@ const { Readable } = require('node:stream');
 const tar = require('tar');
 const { spawn } = require('node:child_process');
 const { parseArgs } = require('node:util');
-const  os  = require('os')
+const  os  = require('os');
+const fs = require("fs");
 
 async function downloadFile(url, filePath) {
   try {
@@ -126,7 +127,7 @@ async function main() {
       process.env.CFLAGS = `--target=${targetArch}-${targetPlatform}-gnu`;
     if(targetPlatform === 'mingw64'){
        args.push('--without-tesseract');
-       await runCommand('rename', ['mingw\\msys\\1.0\\include', 'mingw\\msys\\1.0\\_include']);
+       fs.rename('\\mingw\\msys\\1.0\\include', '\\mingw\\msys\\1.0\\_include');
     }
     await runCommand('sh', args, { cwd: ghostpdlFolder });
 
