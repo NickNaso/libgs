@@ -3,7 +3,6 @@ on: [push, pull_request]
 
 jobs:
     build:
-        fail-fast: false 
         runs-on: windows-latest
         steps:
             - uses: actions/checkout@v4
