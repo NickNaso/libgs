@@ -36,13 +36,7 @@ jobs:
 
             - name: Build
               run: |
-                $arch = $env:matrix_architecture
-                if ($arch -eq "arm64") {
-                    node index.js -p win64 -a arm64
-                }
-                if ($arch -eq "x64") {
-                    node index.js
-                }
+                node index.js
 
             - name: Environment information
               run: npx envinfo
