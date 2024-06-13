@@ -128,7 +128,7 @@ async function main() {
     if(targetPlatform === 'mingw64'){
       args.push('--without-tesseract');
       fs.renameSync('C:\\\\msys64\\mingw64\\include', 'C:\\\\msys64\\mingw64\\_include');
-      process.env.CFLAGS = `-v`;
+      process.env.CFLAGS = `--allow-multiple-definition`;
     }
     await runCommand('sh', args, { cwd: ghostpdlFolder });
 
