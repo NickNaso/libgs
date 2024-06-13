@@ -36,12 +36,13 @@ jobs:
 
             - name: Build
               run: |
-                if [ "${{ matrix.architecture }}" = "arm64" ]; then
+                $arch = $env:matrix_architecture
+                if ($arch -eq "arm64") {
                     node index.js -p win64 -a arm64
-                fi
-                if [ "${{ matrix.architecture }}" = "x64" ]; then
+                }
+                if ($arch -eq "x64") {
                     node index.js
-                fi
+                }
 
             - name: Environment information
               run: npx envinfo
