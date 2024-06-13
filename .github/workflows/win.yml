@@ -26,5 +26,6 @@ jobs:
               run: |
                   cd ghostpdl 
                   ./configure --without-tesseract
+                  make libgs
             
     
