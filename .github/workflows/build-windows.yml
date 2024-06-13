@@ -39,7 +39,8 @@ jobs:
 
             - name: Build
               run: |
-                path
+                echo %PATH%
+                where gcc
                 node index.js -p mingw64 -a x86_64
 
             
