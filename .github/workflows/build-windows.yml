@@ -52,6 +52,6 @@ jobs:
 
             - name: Build
               run: |
-                npm start
+                npm start -a ${{ matrix.architecture }} -p windows 
 
             
