@@ -127,7 +127,7 @@ async function main() {
       process.env.CFLAGS = `--target=${targetArch}-${targetPlatform}-gnu`;
     if(targetPlatform === 'mingw64'){
        args.push('--without-tesseract');
-       fs.renameSync('C:\\\\mingw\\msys\\1.0\\include', 'C:\\\\mingw\\msys\\1.0\\_include');
+       fs.renameSync('C:\\\\msys64\\mingw64\\include', 'C:\\\\msys64\\mingw64\\_include');
     }
     await runCommand('sh', args, { cwd: ghostpdlFolder });
 

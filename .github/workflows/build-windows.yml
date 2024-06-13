@@ -33,9 +33,6 @@ jobs:
 
             - name: Install Node.js modules ...
               run: npm install
-
-            - name: Install MinGW
-              uses: egor-tensin/setup-mingw@v2.2.0
             
             - name: Environment information
               run: npx envinfo
