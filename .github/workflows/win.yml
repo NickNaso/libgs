@@ -26,7 +26,7 @@ jobs:
               shell: msys2 {0}
               run: |
                   cd ghostpdl 
-                  ./configure --without-tesseract
+                  ./configure
                   make libgs || true
                   cat ./obj/aux_/gscdefs.c
                   cat ./obj/gconfigd.h
