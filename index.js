@@ -130,7 +130,7 @@ async function main() {
       // await fs.rename('C:\\\\msys64\\mingw64\\include', 'C:\\\\msys64\\mingw64\\include-old', (err) => { 
       //   console.log(err);
       //  });
-       process.env.LDFLAG += '--allow-multiple-definition'
+       process.env.LDFLAGS += '--allow-multiple-definition'
     }
     await runCommand('sh', args, { cwd: ghostpdlFolder });
 
