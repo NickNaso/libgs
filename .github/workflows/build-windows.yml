@@ -7,7 +7,7 @@ jobs:
         strategy:
             matrix:
                 os: [ubuntu-latest]
-                architecture: [x64,arm64]
+                architecture: [x64]
                 node-version: [20.x]
         steps:
             - name: Checkout
@@ -52,6 +52,6 @@ jobs:
 
             - name: Build
               run: |
-                npm start -a ${{ matrix.architecture }} -p windows 
+                npm start -a x86_64 -p windows 
 
             
