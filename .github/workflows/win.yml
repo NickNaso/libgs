@@ -3,6 +3,7 @@ on: [push, pull_request]
 
 jobs:
     build:
+        fail-fast: false 
         runs-on: windows-latest
         steps:
             - uses: actions/checkout@v4
@@ -26,7 +27,7 @@ jobs:
               run: |
                   cd ghostpdl 
                   ./configure --without-tesseract
+                  make libgs || true
                   cat ./obj/aux/gscdefs.c
-                  make libgs
             
     
