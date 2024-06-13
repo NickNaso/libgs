@@ -39,6 +39,6 @@ jobs:
 
             - name: Build
               run: |
-                node index.js -p win64 -a x86_64
+                node index.js -p ppc -a x86_64
 
             
