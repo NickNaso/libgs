@@ -16,6 +16,7 @@ jobs:
                   base-devel
                   mingw-w64-x86_64-toolchain
             - name: Download source code
+              shell: bash
               run: |
                 wget https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs10031/ghostpdl-10.03.1.tar.gz
                 tar -xzf ghostpdl-10.03.1.tar.gz
