@@ -25,6 +25,6 @@ jobs:
               shell: msys2 {0}
               run: |
                   cd ghostpdl 
-                  ./configure
+                  ./configure --without-tesseract
             
     
