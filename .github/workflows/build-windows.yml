@@ -39,7 +39,7 @@ jobs:
 
             - name: Build
               run: |
-                echo %Path%
+                path
                 node index.js -p mingw64 -a x86_64
 
             
