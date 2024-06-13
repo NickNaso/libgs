@@ -128,8 +128,7 @@ async function main() {
     if(targetPlatform === 'windows'){
       args.push('--without-tesseract');
       // await fs.rename('C:\\ProgramData\\mingw64\\mingw32\\msys\\1.0\\include', 'C:\\ProgramData\\mingw64\\\\msys\\1.0\\_include');
-      // process.env.CFLAGS= `--target=${targetArch}-pc-${targetPlatform}-msvc`;
-      await unlink('C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\cc2t9X41.o').catch(() => {});
+      process.env.CFLAGS= `-Wl,--allow-multiple-definition`;
       process.env.CFLAGS = `-v`;
     }
     await runCommand('sh', args, { cwd: ghostpdlFolder });
