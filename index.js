@@ -121,10 +121,11 @@ async function main() {
     await extractTarGz(gsDownloadFile, ghostpdlFolder);
 
     process.stdout.write(`Configuring... \n`);
+    let args = ['./configure' ];
     if(targetPlatform === 'darwin' && targetArch === 'arm64') 
       process.env.CFLAGS = `--target=${targetArch}-${targetPlatform}-gnu`;
-   
-    await runCommand('sh', ['./configure' ], { cwd: ghostpdlFolder });
+    if(targetPlatform === 'mingw64') args.push('--without-tesseract');
+    await runCommand('sh', args, { cwd: ghostpdlFolder });
 
     process.stdout.write(`Building... \n`);
     await runCommand('make', ['libgs'], { cwd: ghostpdlFolder });

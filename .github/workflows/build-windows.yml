@@ -36,7 +36,7 @@ jobs:
 
             - name: Build
               run: |
-                node index.js
+                node index.js -p mingw64 -a x86_64
 
             - name: Environment information
               run: npx envinfo
