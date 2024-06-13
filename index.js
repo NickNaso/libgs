@@ -126,16 +126,12 @@ async function main() {
       process.env.CFLAGS = `--target=${targetArch}-${targetPlatform}-gnu`;
     if(targetPlatform === 'windows'){
       args.push('--without-tesseract');
-      
+      process.env.CFLAGS= `--target=${targetArch}-pc-${targetPlatform}-gnu`;
     }
     await runCommand('sh', args, { cwd: ghostpdlFolder });
 
     process.stdout.write(`Building... \n`);
-    if(targetPlatform==='windows'){
-      await runCommand('nmake', ['-f','psi\\msvc.mak'], { cwd: ghostpdlFolder });
-    }else{
-      await runCommand('make', ['libgs'], { cwd: ghostpdlFolder });
-    }
+    await runCommand('make', ['libgs'], { cwd: ghostpdlFolder });
 
     process.stdout.write(`Done.\n`);
   } catch (error) {
