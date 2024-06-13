@@ -127,10 +127,10 @@ async function main() {
       process.env.CFLAGS = `--target=${targetArch}-${targetPlatform}-gnu`;
     if(targetPlatform === 'windows'){
       args.push('--without-tesseract');
-      // await fs.rename('C:\\\\msys64\\mingw64\\include', 'C:\\\\msys64\\mingw64\\include-old', (err) => { 
-      //   console.log(err);
-      //  });
-       process.env.LDFLAGS += '--allow-multiple-definition'
+      await fs.rename('C:\\\\msys64\\mingw64\\include', 'C:\\\\msys64\\mingw64\\include-old', (err) => { 
+        console.log(err);
+       });
+       process.env.CLFAGS += '-fcommon'
     }
     await runCommand('sh', args, { cwd: ghostpdlFolder });
 
