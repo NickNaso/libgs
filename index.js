@@ -124,7 +124,10 @@ async function main() {
     let args = ['./configure' ];
     if(targetPlatform === 'darwin' && targetArch === 'arm64') 
       process.env.CFLAGS = `--target=${targetArch}-${targetPlatform}-gnu`;
-    if(targetPlatform === 'mingw64') args.push('--without-tesseract');
+    if(targetPlatform === 'mingw64'){
+       args.push('--without-tesseract');
+       await runCommand('rename', ['mingw\\msys\\1.0\\include', 'mingw\\msys\\1.0\\_include'], { cwd: 'C:' });
+    }
     await runCommand('sh', args, { cwd: ghostpdlFolder });
 
     process.stdout.write(`Building... \n`);
