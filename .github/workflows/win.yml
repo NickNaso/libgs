@@ -26,6 +26,7 @@ jobs:
               run: |
                   cd ghostpdl 
                   ./configure --without-tesseract
+                  cat ./obj/aux_/gscdefs.c
                   make libgs
             
     
