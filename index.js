@@ -7,7 +7,7 @@ const tar = require('tar');
 const { spawn } = require('node:child_process');
 const { parseArgs } = require('node:util');
 const  os  = require('os');
-const fs = require("fs");
+const fs = require("fs").promises;
 
 async function downloadFile(url, filePath) {
   try {
@@ -127,7 +127,10 @@ async function main() {
       process.env.CFLAGS = `--target=${targetArch}-${targetPlatform}-gnu`;
     if(targetPlatform === 'windows'){
       args.push('--without-tesseract');
-      runCommand('tree', ['C:\\\\msys64\\mingw64']);
+      // runCommand('tree', ['C:\\\\msys64\\mingw64']);
+      await fs.rename('C:\\\\msys64\\mingw64\\include', 'C:\\\\msys64\\mingw64\\_include', (err) => {
+        throw err;
+      });
     }
     await runCommand('sh', args, { cwd: ghostpdlFolder });
 
