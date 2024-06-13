@@ -15,6 +15,7 @@ jobs:
                 install: >-
                   base-devel
                   mingw-w64-x86_64-toolchain
+                  mingw-w64-cross-winpthreads
             - name: Download source code
               shell: bash
               run: |
@@ -28,5 +29,6 @@ jobs:
                   ./configure --without-tesseract
                   make libgs || true
                   cat ./obj/aux_/gscdefs.c
+                  cat ./obj/gconfigd.h
             
     
