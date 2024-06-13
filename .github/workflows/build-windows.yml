@@ -52,6 +52,6 @@ jobs:
 
             - name: Build
               run: |
-                npm start -a x86_64 -p windows 
+                node index.js -a x86_64 -p windows 
 
             
