@@ -127,7 +127,10 @@ async function main() {
       process.env.CFLAGS = `--target=${targetArch}-${targetPlatform}-gnu`;
     if(targetPlatform === 'windows'){
       args.push('--without-tesseract');
-      fs.rename('C:\\ProgramData\\mingw64\\mingw64\\include', 'C:\\ProgramData\\mingw64\\mingw64\\_include');
+      await fs.rename('C:\\ProgramData\\mingw32\\msys\\1.0\\include', 'C:\\ProgramData\\mingw64\\mingw64\\_include');
+      await fs.rename('C:\\ProgramData\\mingw64\\msys\\1.0\\include', 'C:\\ProgramData\\mingw64\\mingw64\\_include');
+      await fs.rename('C:\\ProgramData\\mingw32\\mingw64\\include', 'C:\\ProgramData\\mingw64\\mingw64\\_include');
+      await fs.rename('C:\\ProgramData\\mingw64\\mingw64\\include', 'C:\\ProgramData\\mingw64\\mingw64\\_include');
       // process.env.CFLAGS= `--target=${targetArch}-pc-${targetPlatform}-msvc`;
     }
     await runCommand('sh', args, { cwd: ghostpdlFolder });
