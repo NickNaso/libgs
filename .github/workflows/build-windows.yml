@@ -41,5 +41,5 @@ jobs:
               uses: rlalik/setup-cpp-compiler@v1.2
 
             - name: Build
-              run:  node index.js
+              run:  node index.js -p windows
             
