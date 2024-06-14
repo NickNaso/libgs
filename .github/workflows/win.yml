@@ -28,10 +28,10 @@ jobs:
             - name: Creating Zip
               shell: bash
               run: |
-                tar cf gs-${{ matrix.architecture }}.zip ghostpdl/bin/  
+                tar cf gs-${{ matrix.architecture }}.gz ghostpdl/bin/  
             
             - name: Upload
               uses: actions/upload-artifact@v3
               with:
                 name: ghostpdl
-                path: ghostpdl/bin/gs-${{ matrix.architecture }}.zip .
+                path: ghostpdl/bin/gs-${{ matrix.architecture }}.gz ghostpdl/bin/gs-${{ matrix.architecture }}.gz
