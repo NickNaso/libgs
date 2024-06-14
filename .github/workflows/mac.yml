@@ -52,4 +52,3 @@ jobs:
               name: MacOS Build directory
               path: |
                 ghostpdl/bin
-              overwrite: true

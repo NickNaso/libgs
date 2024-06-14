@@ -50,3 +50,9 @@ jobs:
             
             - name: Build
               run: npm start
+
+            - uses: actions/upload-artifact@v4.3.3
+              with:
+                name: Linux Build directory
+                path: |
+                  ghostpdl/bin
