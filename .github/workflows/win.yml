@@ -19,5 +19,5 @@ jobs:
               shell: bash
               run: |
                 cd ghostpdl
-                nmake -f psi/msvc.mak WIN64= nsis
+                nmake -f psi\msvc32.mak WIN64= SBR=1 DEVSTUDIO= && nmake -f psi\msvc32.mak WIN64= DEVSTUDIO= bsc
     
