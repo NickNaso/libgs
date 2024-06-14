@@ -46,3 +46,10 @@ jobs:
               if [ "${{ matrix.architecture }}" = "x64" ]; then
                 node index.js
               fi
+
+          - uses: actions/upload-artifact@v4.3.3
+            with:
+              name: MacOS Build directory
+              path: |
+                ghostpdl/bin
+              overwrite: true
