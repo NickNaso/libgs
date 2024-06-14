@@ -52,6 +52,4 @@ jobs:
               path: |
                 ghostpdl/bin
 
-          - uses: ncipollo/release-action@v1
-            with:
-              artifacts: "Windows-${{ matrix.architecture }} build Directory"
+          - uses: CupOfTea696/gh-action-auto-release@v1.0.2
