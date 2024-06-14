@@ -120,20 +120,26 @@ async function main() {
     await createDirectory(ghostpdlFolder);
     await extractTarGz(gsDownloadFile, ghostpdlFolder);
 
-    process.stdout.write(`Configuring... \n`);
-    if (targetPlatform==='darwin' || targetPlatform==='linux') {
-      let args = ["./configure"];
-      if (targetPlatform === "darwin" && targetArch === "arm64")
-        process.env.CFLAGS = `--target=${targetArch}-${targetPlatform}-gnu`;
-      await runCommand("sh", args, { cwd: ghostpdlFolder });
-
-      process.stdout.write(`Building... \n`);
-      await runCommand("make", ["libgs"], { cwd: ghostpdlFolder });
-    }else if (targetPlatform === "windows") {
-      
-      
+    switch (targetPlatform) {
+      case 'windows':
+        process.stdout.write('Building\n')
+        await runCommand("nmake", ["-f","psi\\msvc32.mak","WIN64=","DEVSTUDIO=","clean"], { cwd: ghostpdlFolder });
+        await runCommand("nmake", ["-f","psi\\msvc32.mak","WIN64=","SBR=1","DEVSTUDIO="], { cwd: ghostpdlFolder });
+        await runCommand("nmake", ["-f","psi\\msvc32.mak","WIN64=","DEVSTUDIO=","bsc"], { cwd: ghostpdlFolder });
+        break;
+      case 'linux':
+      case 'darwin':
+        process.stdout.write('Building\n')
+        let args = ["./configure"];
+        if (targetArch === "arm64")
+          process.env.CFLAGS = `--target=${targetArch}-${targetPlatform}-gnu`;
+        await runCommand("sh", args, { cwd: ghostpdlFolder });
+        await runCommand("make", ["libgs"], { cwd: ghostpdlFolder });
+        break;
+      default:
+        throw `Unknown platform: ${targetPlatform}\n`;
+        break;
     }
-    
 
     process.stdout.write(`Done.\n`);
   } catch (error) {
