@@ -28,8 +28,7 @@ jobs:
             - name: Creating Zip
               shell: bash
               run: |
-                cd ghostpdl/bin
-                zip -r gs-windows-${{ matrix.architecture }}.zip .
+                tar cf gs-${{ matrix.architecture }}.zip ghostpdl/bin/  
             
             - name: Upload
               uses: actions/upload-artifact@v3
