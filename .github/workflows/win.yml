@@ -6,29 +6,18 @@ jobs:
         runs-on: windows-latest
         steps:
             - uses: actions/checkout@v4
-        
-            - name: Setup MinGW
-              uses: msys2/setup-msys2@v2
-              with:
-                update: true
-                msystem: mingw64
-                install: >-
-                  base-devel
-                  mingw-w64-x86_64-toolchain
-                  mingw-w64-cross-winpthreads
-            - name: Download source code
+            - uses: ilammy/msvc-dev-cmd@v1
+
+            - name: Fetch source code  
               shell: bash
               run: |
                 curl https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs10031/ghostpdl-10.03.1.tar.gz -O -L
                 tar -xzf ghostpdl-10.03.1.tar.gz
                 mv ghostpdl-10.03.1 ghostpdl
-            - name: Configure
-              shell: msys2 {0}
-              run: |
-                  cd ghostpdl 
-                  ./configure
-                  make libgs || true
-                  cat ./obj/aux_/gscdefs.c
-                  cat ./obj/gconfigd.h
             
+            - name: Build
+              shell: bash
+              run: |
+                cd ghostpdl
+                nmake -f psi/msvc.mak WIN64= nsis
     
