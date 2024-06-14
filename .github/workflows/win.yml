@@ -16,8 +16,8 @@ jobs:
                 mv ghostpdl-10.03.1 ghostpdl
             
             - name: Build
-              shell: bash
               run: |
                 cd ghostpdl
-                nmake -f psi\msvc32.mak WIN64= SBR=1 DEVSTUDIO= && nmake -f psi\msvc32.mak WIN64= DEVSTUDIO= bsc
-    
+                nmake -f psi\msvc32.mak WIN64= DEVSTUDIO= clean 
+                nmake -f psi\msvc32.mak WIN64= SBR=1 DEVSTUDIO= 
+                nmake -f psi\msvc32.mak WIN64= DEVSTUDIO= bsc
