@@ -6,7 +6,7 @@ jobs:
         runs-on: windows-latest
         strategy:
             matrix:
-                architecture: [x64,x86]
+                architecture: [x64,x86,arm64]
         steps:
             - uses: actions/checkout@v4
             - uses: ilammy/msvc-dev-cmd@v1
