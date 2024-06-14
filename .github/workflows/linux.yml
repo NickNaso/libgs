@@ -53,6 +53,7 @@ jobs:
 
             - uses: actions/upload-artifact@v4.3.3
               with:
-                name: Linux Build directory
+                name: |
+                  Linux-${{ matrix.architecture }} build directory
                 path: |
                   ghostpdl/bin

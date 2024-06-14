@@ -47,6 +47,7 @@ jobs:
             
           - uses: actions/upload-artifact@v4.3.3
             with:
-              name: Windows Build directory
+              name: |
+                Windows-${{ matrix.architecture }} build directory
               path: |
                 ghostpdl/bin
