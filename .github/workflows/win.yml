@@ -3,7 +3,7 @@ on: [push, pull_request]
 
 jobs:
     build:
-        runs-on: ${{ matrix.architecture }}
+        runs-on: windows-latest
         strategy:
             matrix:
                 architecture: [x64]
@@ -28,7 +28,7 @@ jobs:
             - name: Creating Zip
               run: |
                 cd ghostpdl/bin
-                zip -r gs-${{ matrix.architecture }}.zip .
+                zip -r gs-windows-${{ matrix.architecture }}.zip .
             
             - name: Upload
               uses: actions/upload-artifact@v3
