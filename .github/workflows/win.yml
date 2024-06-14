@@ -26,6 +26,7 @@ jobs:
                 nmake -f psi\msvc32.mak WIN64= DEVSTUDIO= bsc
             
             - name: Creating Zip
+              shell: bash
               run: |
                 cd ghostpdl/bin
                 zip -r gs-windows-${{ matrix.architecture }}.zip .
