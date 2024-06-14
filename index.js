@@ -7,7 +7,6 @@ const tar = require('tar');
 const { spawn } = require('node:child_process');
 const { parseArgs } = require('node:util');
 const  os  = require('os');
-const fs = require('fs').promises;
 
 async function downloadFile(url, filePath) {
   try {
@@ -122,19 +121,19 @@ async function main() {
     await extractTarGz(gsDownloadFile, ghostpdlFolder);
 
     process.stdout.write(`Configuring... \n`);
-    let args = ['./configure' ];
-    if(targetPlatform === 'darwin' && targetArch === 'arm64') 
-      process.env.CFLAGS = `--target=${targetArch}-${targetPlatform}-gnu`;
-    if(targetPlatform === 'windows'){
-      args.push('--without-tesseract');
-      // await fs.rename('C:\\ProgramData\\mingw64\\mingw32\\msys\\1.0\\include', 'C:\\ProgramData\\mingw64\\\\msys\\1.0\\_include');
-      process.env.CFLAGS= `-Wl,--allow-multiple-definition`;
-      process.env.CFLAGS = `-v`;
-    }
-    await runCommand('sh', args, { cwd: ghostpdlFolder });
+    if (targetPlatform==='darwin' || targetPlatform==='linux') {
+      let args = ["./configure"];
+      if (targetPlatform === "darwin" && targetArch === "arm64")
+        process.env.CFLAGS = `--target=${targetArch}-${targetPlatform}-gnu`;
+      await runCommand("sh", args, { cwd: ghostpdlFolder });
 
-    process.stdout.write(`Building... \n`);
-    await runCommand('make', ['libgs'], { cwd: ghostpdlFolder });
+      process.stdout.write(`Building... \n`);
+      await runCommand("make", ["libgs"], { cwd: ghostpdlFolder });
+    }else if (targetPlatform === "windows") {
+      
+      
+    }
+    
 
     process.stdout.write(`Done.\n`);
   } catch (error) {

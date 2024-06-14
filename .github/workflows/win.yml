@@ -3,7 +3,10 @@ on: [push, pull_request]
 
 jobs:
     build:
-        runs-on: windows-latest
+        runs-on: ${{ matrix.architecture }}
+        strategy:
+            matrix:
+                architecture: [x64]
         steps:
             - uses: actions/checkout@v4
             - uses: ilammy/msvc-dev-cmd@v1
@@ -21,3 +24,14 @@ jobs:
                 nmake -f psi\msvc32.mak WIN64= DEVSTUDIO= clean 
                 nmake -f psi\msvc32.mak WIN64= SBR=1 DEVSTUDIO= 
                 nmake -f psi\msvc32.mak WIN64= DEVSTUDIO= bsc
+            
+            - name: Creating Zip
+              run: |
+                cd ghostpdl/bin
+                zip -r gs-${{ matrix.architecture }}.zip .
+            
+            - name: Upload
+              uses: actions/upload-artifact@v3
+              with:
+                name: ghostpdl
+                path: ghostpdl/bin/gs-${{ matrix.architecture }}.zip .
