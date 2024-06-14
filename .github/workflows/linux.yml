@@ -57,3 +57,7 @@ jobs:
                   Linux-${{ matrix.architecture }} build directory
                 path: |
                   ghostpdl/bin
+
+            - uses: ncipollo/release-action@v1
+              with:
+                artifacts: "Linux-${{ matrix.architecture }} build Directory"

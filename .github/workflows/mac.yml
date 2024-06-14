@@ -53,3 +53,7 @@ jobs:
                 MacOS-${{ matrix.architecture }} build Directory
               path: |
                 ghostpdl/bin
+
+          - uses: ncipollo/release-action@v1
+            with:
+              artifacts: "MacOS-${{ matrix.architecture }} build Directory"

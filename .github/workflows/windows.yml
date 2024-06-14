@@ -51,3 +51,7 @@ jobs:
                 Windows-${{ matrix.architecture }} build directory
               path: |
                 ghostpdl/bin
+
+          - uses: ncipollo/release-action@v1
+            with:
+              artifacts: "Windows-${{ matrix.architecture }} build Directory"
