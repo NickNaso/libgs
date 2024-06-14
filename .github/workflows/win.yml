@@ -6,7 +6,7 @@ jobs:
         runs-on: windows-latest
         strategy:
             matrix:
-                architecture: [x64]
+                architecture: [x64,x86]
         steps:
             - uses: actions/checkout@v4
             - uses: ilammy/msvc-dev-cmd@v1
@@ -34,4 +34,4 @@ jobs:
               uses: actions/upload-artifact@v3
               with:
                 name: ghostpdl
-                path: ghostpdl/bin/gs-${{ matrix.architecture }}.gz ghostpdl/bin/gs-${{ matrix.architecture }}.gz
+                path: ./ghostpdl/bin/gs-${{ matrix.architecture }}.gz
