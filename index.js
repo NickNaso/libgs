@@ -123,9 +123,10 @@ async function main() {
     switch (targetPlatform) {
       case 'windows':
         process.stdout.write('Building\n')
-        await runCommand("nmake", ["-f","psi\\msvc32.mak","WIN64=","DEVSTUDIO=","clean"], { cwd: ghostpdlFolder });
-        await runCommand("nmake", ["-f","psi\\msvc32.mak","WIN64=","SBR=1","DEVSTUDIO="], { cwd: ghostpdlFolder });
-        await runCommand("nmake", ["-f","psi\\msvc32.mak","WIN64=","DEVSTUDIO=","bsc"], { cwd: ghostpdlFolder });
+        let selArch = targetArch === "x64" ? "WIN64" : targetArch === "x86" ? "WIN32" : "ARM64";
+        await runCommand("nmake", ["-f","psi\\msvc32.mak",`${selArch}=`,"DEVSTUDIO=","clean"], { cwd: ghostpdlFolder });
+        await runCommand("nmake", ["-f","psi\\msvc32.mak",`${selArch}=`,"SBR=1","DEVSTUDIO="], { cwd: ghostpdlFolder });
+        await runCommand("nmake", ["-f","psi\\msvc32.mak",`${selArch}=`,"DEVSTUDIO=","bsc"], { cwd: ghostpdlFolder });
         break;
       case 'linux':
       case 'darwin':
