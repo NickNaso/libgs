@@ -138,7 +138,6 @@ async function main() {
         break;
       default:
         throw `Unknown platform: ${targetPlatform}\n`;
-        break;
     }
 
     process.stdout.write(`Done.\n`);
