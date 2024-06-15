@@ -57,7 +57,3 @@ jobs:
                   Linux-${{ matrix.architecture }} build directory
                 path: |
                   ghostpdl/bin
-
-            - uses: CupOfTea696/gh-action-auto-release@v1.0.2
-              env:
-                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
