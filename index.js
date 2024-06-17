@@ -133,7 +133,7 @@ async function main() {
         process.stdout.write('Building\n')
         let args = ["./configure"];
         if (targetArch === "arm64")
-          process.env.CFLAGS = `--target=${targetArch}-${targetPlatform}-gnu`;
+          process.env.CFLAGS = `--target=aarch64-${targetPlatform}-gnu`;
         await runCommand("sh", args, { cwd: ghostpdlFolder });
         await runCommand("make", ["libgs"], { cwd: ghostpdlFolder });
         break;
