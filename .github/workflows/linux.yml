@@ -49,7 +49,7 @@ jobs:
               run: npx envinfo
             
             - name: Build
-              run: npm start
+              run: node index.js -a ${{ matrix.architecture }}
 
             - uses: actions/upload-artifact@v4.3.3
               with:
