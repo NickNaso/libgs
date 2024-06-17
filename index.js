@@ -6,24 +6,7 @@ const { Readable } = require('node:stream');
 const tar = require('tar');
 const { spawn } = require('node:child_process');
 const { parseArgs } = require('node:util');
-
-const options = {
-  release: {
-    type: 'string',
-    description: 'Release version',
-    short: 'r',
-    long: 'release',
-  }
-}
-const { values, positionals } = parseArgs({
-  options: options,
-  strict: true,
-});
-
-let gsRelease = `gs10031`;
-let gsDownloadFile = `ghostpdl-10.03.1.tar.gz`;
-let gsDownload = `https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/${gsRelease}/${gsDownloadFile}`;
-const ghostpdlFolder = 'ghostpdl'
+const  os  = require('os');
 
 async function downloadFile(url, filePath) {
   try {
@@ -75,7 +58,7 @@ async function runCommand(command, args, options) {
       process.stderr.write(`${data}`)
     });
     childProcess.on('close', (code) => {
-      if (code !== 0) reject(new Error(`${command} exited with code ${code}: ${stderr}`));
+      if (code !== 0) reject(new Error(`${command} exited with code ${code}`));
       resolve();
     });
   });
@@ -83,12 +66,50 @@ async function runCommand(command, args, options) {
 
 async function main() {
   try {
+
+    const options = {
+      release: {
+        type: 'string',
+        description: 'Release version',
+        short: 'r',
+        long: 'release',
+      },
+      arch: {
+        type: 'string',
+        description: 'Architecture',
+        short: 'a',
+        long: 'arch',
+      },
+      platform: {
+        type: 'string',
+        description: 'Platform',
+        short: 'p',
+        long: 'platform',
+      }
+    }
+
+    const { values } = parseArgs({
+      options: options,
+      strict: true,
+    });
+
+    let gsRelease = `gs10031`;
+    let gsDownloadFile = `ghostpdl-10.03.1.tar.gz`;
+    let gsDownload = `https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/${gsRelease}/${gsDownloadFile}`;
+    const ghostpdlFolder = 'ghostpdl'
+
+    let targetArch;
+    let targetPlatform;
+    values.platform ? targetPlatform = values.platform : targetPlatform = (os.platform());
+    values.arch ? targetArch = values.arch : targetArch = os.arch();
+ 
     if (values.release) {
       gsRelease = `gs${values.release.replace(/\./g, '')}`;
       gsDownloadFile = `ghostpdl-${values.release}.tar.gz`;
       gsDownload = `https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/${gsRelease}/${gsDownloadFile}`;
     }
 
+    process.stdout.write("Cleaning up... \n");
     await unlink(gsDownloadFile).catch(() => {});
     await rm('ghostpdl', { recursive: true, force: true }).catch(() => {});
 
@@ -99,11 +120,26 @@ async function main() {
     await createDirectory(ghostpdlFolder);
     await extractTarGz(gsDownloadFile, ghostpdlFolder);
 
-    process.stdout.write(`Configuring... \n`);
-    await runCommand('sh', ['configure'], { cwd: ghostpdlFolder });
-
-    process.stdout.write(`Building... \n`);
-    await runCommand('make', ['libgs'], { cwd: ghostpdlFolder });
+    switch (targetPlatform) {
+      case 'windows':
+        process.stdout.write('Building\n')
+        let selArch = targetArch === "x64" ? "WIN64" : targetArch === "x86" ? "WIN32" : "ARM64";
+        await runCommand("nmake", ["-f","psi\\msvc32.mak",`${selArch}=`,"DEVSTUDIO=","clean"], { cwd: ghostpdlFolder });
+        await runCommand("nmake", ["-f","psi\\msvc32.mak",`${selArch}=`,"SBR=1","DEVSTUDIO="], { cwd: ghostpdlFolder });
+        await runCommand("nmake", ["-f","psi\\msvc32.mak",`${selArch}=`,"DEVSTUDIO=","bsc"], { cwd: ghostpdlFolder });
+        break;
+      case 'linux':
+      case 'darwin':
+        process.stdout.write('Building\n')
+        let args = ["./configure"];
+        targetArch === "arm64" ? targetArch = "aarch64" : targetArch = targetArch; 
+        args.push(`--build=${targetArch}-${targetPlatform}-gnu`);
+        await runCommand("sh", args, { cwd: ghostpdlFolder });
+        await runCommand("make", ["libgs"], { cwd: ghostpdlFolder });
+        break;
+      default:
+        throw `Unknown platform: ${targetPlatform}\n`;
+    }
 
     process.stdout.write(`Done.\n`);
   } catch (error) {
