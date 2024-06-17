@@ -21,7 +21,7 @@ jobs:
                 sudo apt upgrade -y
                 sudo apt install build-essential -y
                 sudo apt install g++-aarch64-linux-gnu -y
-                sudo apt install g++-arm--linux--gnueabi -y
+                sudo apt install g++-arm-linux-gnueabihf -y
                 if [ "${{ matrix.architecture }}" = "arm64" ]; then
                     export CC="aarch64-linux-gnu-gcc" CXX="aarch64-linux-gnu-g++"
                 elif [ "${{ matrix.architecture }}" = "armv7" ]; then
