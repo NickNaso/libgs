@@ -8,7 +8,10 @@ jobs:
 
             matrix:
                 os: [ubuntu-latest]
-                architecture: [x64, arm64, armv7, armv6]
+                architecture: [
+                  [x64, x64-musl],
+                  arm64, armv7, armv6, arm64v8-musl
+                ]
                 node-version: [20.x]
         steps:
             - name: Checkout
@@ -22,13 +25,8 @@ jobs:
                 sudo apt install build-essential -y
                 sudo apt install g++-aarch64-linux-gnu -y
                 sudo apt install g++-arm-linux-gnueabihf -y
-                # if [ "${{ matrix.architecture }}" = "arm64" ]; then
-                #     export CC="aarch64-linux-gnu-gcc" CXX="aarch64-linux-gnu-g++"
-                # elif [ "${{ matrix.architecture }}" = "armv7" ]; then
-                #     export CC="arm-linux-gnueabihf-gcc" CXX="arm-linux-gnueabihf-g++"
-                # elif [ "${{ matrix.architecture }}" = "armv6" ]; then
-                #     export CC="arm-linux-gnueabi-gcc" CXX="arm-linux-gnueabi-g++"
-                # fi
+                sudo apt install musl-tools -y
+
             - name: Cache
               uses: actions/cache@v4
               id: npm-cache
@@ -54,8 +52,13 @@ jobs:
               run: npx envinfo
             
             - name: Build
-              run: node index.js -a ${{ matrix.architecture }}
-
+              run: |
+                if [ ${{matrix.architecture}} = x64-musl || ${{matrix.architecture}} = arm64v8-musl ]; then
+                  architecture=${matrix.architecture/-musl/}
+                  node index.js -a ${{ matrix.architecture }} -p linux-musl
+                else
+                  node index.js -a ${{ matrix.architecture }}
+                fi
             - uses: actions/upload-artifact@v4.3.3
               with:
                 name: |

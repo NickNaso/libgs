@@ -132,7 +132,7 @@ async function main() {
       case 'darwin':
         process.stdout.write('Building\n')
         let args = ["./configure"];
-        targetArch === "arm64" ? targetArch = "aarch64" : targetArch = targetArch; // fix arm64 -> aarch64
+        targetArch === "arm64" ? targetArch = "aarch64" : targetArch = targetArch; 
         args.push(`--build=${targetArch}-${targetPlatform}-gnu`);
         await runCommand("sh", args, { cwd: ghostpdlFolder });
         await runCommand("make", ["libgs"], { cwd: ghostpdlFolder });
