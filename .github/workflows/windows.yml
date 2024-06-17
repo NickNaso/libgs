@@ -45,9 +45,3 @@ jobs:
             run: | 
               node index.js -p windows -a ${{ matrix.architecture }}
             
-          - uses: actions/upload-artifact@v4.3.3
-            with:
-              name: |
-                Windows-${{ matrix.architecture }} build directory
-              path: |
-                ghostpdl/bin

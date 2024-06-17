@@ -40,10 +40,3 @@ jobs:
           - name: Build
             run: | 
               node index.js 
-
-          - uses: actions/upload-artifact@v4.3.3
-            with:
-              name: |
-                MacOS-${{ matrix.os }} build Directory
-              path: |
-                ghostpdl/bin

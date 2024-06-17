@@ -51,10 +51,3 @@ jobs:
             
             - name: Build
               run: node index.js -a ${{ matrix.architecture }}
-
-            - uses: actions/upload-artifact@v4.3.3
-              with:
-                name: |
-                  Linux-${{ matrix.architecture }} build directory
-                path: |
-                  ghostpdl/bin
