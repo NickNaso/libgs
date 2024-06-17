@@ -22,13 +22,13 @@ jobs:
                 sudo apt install build-essential -y
                 sudo apt install g++-aarch64-linux-gnu -y
                 sudo apt install g++-arm-linux-gnueabihf -y
-                if [ "${{ matrix.architecture }}" = "arm64" ]; then
-                    export CC="aarch64-linux-gnu-gcc" CXX="aarch64-linux-gnu-g++"
-                elif [ "${{ matrix.architecture }}" = "armv7" ]; then
-                    export CC="arm-linux-gnueabihf-gcc" CXX="arm-linux-gnueabihf-g++"
-                elif [ "${{ matrix.architecture }}" = "armv6" ]; then
-                    export CC="arm-linux-gnueabi-gcc" CXX="arm-linux-gnueabi-g++"
-                fi
+                # if [ "${{ matrix.architecture }}" = "arm64" ]; then
+                #     export CC="aarch64-linux-gnu-gcc" CXX="aarch64-linux-gnu-g++"
+                # elif [ "${{ matrix.architecture }}" = "armv7" ]; then
+                #     export CC="arm-linux-gnueabihf-gcc" CXX="arm-linux-gnueabihf-g++"
+                # elif [ "${{ matrix.architecture }}" = "armv6" ]; then
+                #     export CC="arm-linux-gnueabi-gcc" CXX="arm-linux-gnueabi-g++"
+                # fi
             - name: Cache
               uses: actions/cache@v4
               id: npm-cache
