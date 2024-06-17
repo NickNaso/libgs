@@ -24,7 +24,6 @@ jobs:
                 sudo apt install build-essential -y
                 sudo apt install g++-aarch64-linux-gnu -y
                 sudo apt install g++-arm-linux-gnueabihf -y
-                sudo apt install musl-tools -y
 
             - name: Cache
               uses: actions/cache@v4
@@ -51,7 +50,8 @@ jobs:
               run: npx envinfo
             
             - name: Build
-              run: node index.js -a ${{ matrix.architecture }} -p linux-musl
+              run: node index.js -a ${{ matrix.architecture }}
+
             - uses: actions/upload-artifact@v4.3.3
               with:
                 name: |
