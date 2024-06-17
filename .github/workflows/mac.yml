@@ -44,6 +44,6 @@ jobs:
           - uses: actions/upload-artifact@v4.3.3
             with:
               name: |
-                MacOS-${{ matrix.architecture }} build Directory
+                MacOS-${{ matrix.os }} build Directory
               path: |
                 ghostpdl/bin
