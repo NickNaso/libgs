@@ -54,7 +54,6 @@ jobs:
             - name: Build
               run: |
                 if [ ${{matrix.architecture}} = x64-musl || ${{matrix.architecture}} = arm64v8-musl ]; then
-                  architecture=${matrix.architecture/-musl/}
                   node index.js -a ${{ matrix.architecture }} -p linux-musl
                 else
                   node index.js -a ${{ matrix.architecture }}
