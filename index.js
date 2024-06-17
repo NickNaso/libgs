@@ -133,6 +133,10 @@ async function main() {
         process.stdout.write('Building\n')
         let args = ["./configure"];
         targetArch === "arm64" ? targetArch = "aarch64" : targetArch = targetArch; 
+        if(targetArch.includes("-musl")) {
+          targetArch = targetArch.replace("-musl", ""); 
+          targetPlatform = "linux-musl"
+        }
         args.push(`--build=${targetArch}-${targetPlatform}-gnu`);
         await runCommand("sh", args, { cwd: ghostpdlFolder });
         await runCommand("make", ["libgs"], { cwd: ghostpdlFolder });
