@@ -1,4 +1,4 @@
-name: 'Build for linux'
+name: 'Build for linux-musl'
 on: [push, pull_request]
 
 jobs:
@@ -9,7 +9,7 @@ jobs:
             matrix:
                 os: [ubuntu-latest]
                 architecture: [
-                  x64, arm64, armv7, armv6, arm64v8
+                  x64, arm64v8
                 ]
                 node-version: [20.x]
         steps:
