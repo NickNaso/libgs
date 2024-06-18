@@ -1,7 +1,0 @@
-{
-  "name": "libgs",
-  "version": "1.0",
-  "optionalDependencies": {
-    "@libgs/darwin-aarch64": "1.0"
-  }
-}

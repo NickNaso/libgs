@@ -16,7 +16,7 @@
     "type": "git",
     "url": "git+https://github.com/NickNaso/libgs.git"
   },
- "contributors": [
+  "contributors": [
     {
       "name": "Nicola Del Gobbo",
       "email": "nicoladelgobbo@gmail.com"
