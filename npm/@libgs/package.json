@@ -1,0 +1,6 @@
+{
+  "name": "@libgs",
+  "optionalDependencies": {
+    "@libgs/darwin-aarch64": "./darwin-aarch64"
+  }
+}
