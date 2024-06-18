@@ -1,6 +1,6 @@
 {
-  "name": "@libgs/template",
+  "name": "@libgs/",
   "version": "1.0",
-  "os": [""],
-  "arch": [""]
+  "os": "",
+  "arch": ""
 }
