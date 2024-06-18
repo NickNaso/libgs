@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+const { existsSync } = require("fs");
 async function extractTarGz(tarGzPath, destinationPath) {
   try {
     const rGSTarGz = createReadStream(tarGzPath);
