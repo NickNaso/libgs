@@ -55,7 +55,7 @@ const populate = async () => {
         await fs.readFile("package.json", "utf-8")
       );
       packageJson.name = `@libgs/${currentDir}`;
-      packageJson.os = platform;
+      packageJson.os = [platform];
       packageJson.arch = arch;
       await fs.writeFile("package.json", JSON.stringify(packageJson, null, 2));
 
