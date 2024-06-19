@@ -12,7 +12,8 @@
   "scripts": {
     "start": "node index.js",
     "makePackages": "node makePackages.js",
-    "clean": "node clean.js"
+    "clean": "node clean.js",
+    "lint": "eslint . --fix"
   },
   "repository": {
     "type": "git",
@@ -33,6 +34,11 @@
     "url": "https://github.com/NickNaso/libgs/issues"
   },
   "homepage": "https://github.com/NickNaso/libgs#readme",
+  "devDependencies": {
+    "@eslint/js": "^9.5.0",
+    "eslint": "^9.5.0",
+    "globals": "^15.6.0"
+  },
   "dependencies": {
     "tar": "^7.2.0"
   }
