@@ -4,21 +4,18 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 
 /**
- * Cleans the working directory by removing all files except for "populate.js" and ".gitignore".
+ * Cleans the working directory by removing all files.
  *
  * @return {Promise<void>} A promise that resolves when the working directory is cleaned.
  */
 async function cleanWorkingDirectory() {
-  const files = await fs.readdir(process.cwd());
-  await Promise.all(
-    files.map(async (file) => {
-      if (file === "populate.js" || file === ".gitignore") return;
-      await fs.rm(path.join(process.cwd(), file), {
-        recursive: true,
-        force: true,
-      });
-    })
-  );
+  const files = await fs.readdir(path.join(process.cwd(), '/npm/@libgs'));
+  for (const file of files) {
+    await fs.rm(path.join(process.cwd(), '/npm/@libgs', file), {
+      recursive: true,
+      force: true,
+    });
+  }
 }
 
 /**
@@ -26,12 +23,24 @@ async function cleanWorkingDirectory() {
  *
  * @return {Promise<void>} A promise that resolves when the working directory is populated.
  */
-async function populate() {
+async function makePackages() {
+
+  // In linux and onluy on linux we need to add "libc": [""] the dafult is libc and if compiled with musl we need to libc: ["musl"]
+  // https://docs.npmjs.com/cli/v10/configuring-npm/package-json
+  // https://docs.npmjs.com/cli/v10/using-npm/scripts
+
   const packageJson = {
     name: "@libgs/",
     version: "1.0",
+    description: "",
+    mian: "index.js",
+    scripts: {
+      postinstall: "node postinstall.js",
+    },
     os: [""],
-    arch: "",
+    cpu: [""],
+    libc: ["glibc or musl"],
+    dependencies: {tar: "^6.1.0"},
   };
 
   const postInstallJS = `
@@ -86,9 +95,11 @@ async function populate() {
   };
 `;
 
+  // che ne dici di usare Map? https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map
   const supportedPlatforms = {
     darwin: ["aarch64", "x64"],
     linux: ["x64", "arm64", "armv7"],
+    // musl
     win32: ["x64", "x86"],
   };
 
@@ -121,7 +132,8 @@ async function populate() {
   }
 }
 
-populate().catch((err) => {
+makePackages()
+.catch((err) => {
   console.error(err);
   process.exit(1);
 });
