@@ -1,68 +1,107 @@
 "use strict";
-const fs = require("node:fs").promises;
+
+const fs = require("node:fs/promises");
 const path = require("node:path");
 
-const supportedPlatforms = {
-  darwin: ["aarch64", "x64"],
-  linux: ["x64", "arm64", "armv7"],
-  win32: ["x64", "x86"],
-};
-
-const cleanWorkingDirectory = async () => {
+async function cleanWorkingDirectory() {
   const files = await fs.readdir(process.cwd());
   await Promise.all(
     files.map(async (file) => {
-      if (
-        file === "template" ||
-        file === "populate.js" ||
-        file === ".gitignore"
-      )
-        return;
+      if (file === "populate.js" || file === ".gitignore") return;
       await fs.rm(path.join(process.cwd(), file), {
         recursive: true,
         force: true,
       });
     })
   );
-};
+}
 
-const copyTemplateFiles = async (destination) => {
-  const templateDir = path.join(__dirname, "template");
-  const templateFiles = await fs.readdir(templateDir);
-  await Promise.all(
-    templateFiles.map(async (file) => {
-      await fs.copyFile(
-        path.join(templateDir, file),
-        path.join(process.cwd(), destination, file)
-      );
-    })
-  );
-};
+async function populate() {
+  const packageJson = {
+    name: "@libgs/",
+    version: "1.0",
+    os: [""],
+    arch: "",
+  };
 
-const populate = async () => {
+  const postInstallJS = `
+  "use strict";
+  const tar = require("tar");
+  const fs = require("node:fs/promises");
+  const path = require("node:path");
+  async function unzipArchive() {
+    const files = await fs.readdir(process.cwd());
+    const archiveFiles = files.filter((file) => file.endsWith(".tar.gz"));
+    for (const file of archiveFiles) {
+      tar.extract({
+        file: path.join(process.cwd(), file),
+        cwd: process.cwd(),
+      });
+    }
+  }
+
+  unzipArchive().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+`;
+
+  const indexJS = `
+  "use strict";
+  const fs = require("node:fs");
+
+  module.exports = async function getLibGSPath() {
+    const fileList = [];
+    const fileExtensions = [".dylib", ".so", ".a", ".dll"];
+
+    const files = await fs.promises.readdir(__dirname);
+    for (const file of files) {
+      if (fileExtensions.some((ext) => file.endsWith(ext))) {
+        fileList.push(file);
+      }
+    }
+
+    return {
+      path: __dirname,
+      files: fileList,
+    };
+  };
+`;
+
+  const supportedPlatforms = {
+    darwin: ["aarch64", "x64"],
+    linux: ["x64", "arm64", "armv7"],
+    win32: ["x64", "x86"],
+  };
+
+  process.stdout.write("Cleaning working directory...\n");
   await cleanWorkingDirectory();
 
-  await fs.mkdir(process.cwd(), { recursive: true });
+  process.stdout.write("Populating working directory...\n");
   for (const [platform, archs] of Object.entries(supportedPlatforms)) {
     for (const arch of archs) {
       const currentDir = `${platform}-${arch}`;
+      process.stdout.write(`Working on ${currentDir}\n`);
       await fs.mkdir(path.join(process.cwd(), currentDir), { recursive: true });
-      await copyTemplateFiles(currentDir);
 
-      process.chdir(path.join(process.cwd(), currentDir));
-
-      const packageJson = JSON.parse(
-        await fs.readFile("package.json", "utf-8")
-      );
       packageJson.name = `@libgs/${currentDir}`;
-      packageJson.os = [platform];
       packageJson.arch = arch;
-      await fs.writeFile("package.json", JSON.stringify(packageJson, null, 2));
-
-      process.chdir(path.join(process.cwd(), ".."));
+      packageJson.os = [platform];
+      await fs.writeFile(
+        path.join(process.cwd(), currentDir, "package.json"),
+        JSON.stringify(packageJson, null, 2)
+      );
+      await fs.writeFile(
+        path.join(process.cwd(), currentDir, "index.js"),
+        indexJS
+      );
+      await fs.writeFile(
+        path.join(process.cwd(), currentDir, "postinstall.js"),
+        postInstallJS
+      );
     }
   }
-};
+}
 
 populate().catch((err) => {
   console.error(err);
