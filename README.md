@@ -1,11 +1,5 @@
 # libgs
 
-**libsg** is a ...
-
-## This module is under development yet :-) 
-### It will be a long process end this project and every help will be welcome
-### Give me other time i work with :heart: for all of you
-
 * [Introduction](#introduction)
 * [Supported platforms](#supported_platforms)
 * [Installation](#install)
@@ -19,52 +13,51 @@
 
 ## Introduction
 
-libgs is a Node.js wrapper for Ghostscript. It makes it easy to run Ghostscript from Node.js.
+Ghoscript and its dependencies are provided as pre-compiled static libraries
+named **libgs**. The library is avalable for the most common operating systems
+and cpu architectures.
 
-Ghostscript is a tool for handling and manipulating PostScript and PDF files. It is open source and has been around for a long time. It is written in C and is one of the most widely-used tools for handling PDF files.
-
-libgs is a wrapper for Ghostscript that makes it easy to use from Node.js. It provides a simple API that allows you to run Ghostscript with the same arguments that you would use from the command line.
-
-libgs is great for handling PDF files on the server side. You can use it to convert PDF files to other formats, extract text from PDF files, and more.
-
-### What is libgs
-
-
-**libgs** is a Node.js wrapper for Ghostscript. It provides a simple API to run Ghostscript from Node.js with the same arguments that you would use from the command line. 
-
-It is great for handling PDF files on the server side. You can use it to convert PDF files to other formats, extract text from PDF files, and more. 
-
+The libraries ara distributed through the [release][] or the npm registry under
+[@libgs][] organisation.
 
 <a name="supported_platforms">
 
 ## Supported platforms
 
-
 The following platforms are supported:
 
-- Linux(x64,arm64,armv7)/musl
-- MacOS(aarch64,x64)
-- Windows(x64,x86)
+|                              | x86    | x64    | armv6  | armv7  | arm64  | 
+| ---------------------------- | ------ | ------ | ------ | ------ | ------ |
+| Windows                      | ✅     | ✅    |        |        |        |
+| macOS                        |        | ✅     |        |        | ✅    |
+| Linux gnu (glibc)            |        | ✅     | ✅    | ✅     | ✅    |
+| Linux  musl                  |        | ✅     | ✅    | ✅     | ✅    |
+
+### Packages
+
+- [@libgs/darwin-aarch64][]
+- [@libgs/darwin-x64][]
+- [@libgs/linux-armv7][]
+- [@libgs/linux-amr64][]
+- [@libgs/linux-x64][]
+- [@libgs/linux-musl-armv7][]
+- [@libgs/linux-musl-arm64][]
+- [@libgs/linux-musl-x64][]
+- [@libgs/win32-x64][]
+- [@libgs/win32-x86][]
 
 <a name="install"></a>
 
 ## Installation
 
-```sh
-git clone https://github.com/NickNaso/libgs.git
-cd libgs 
-npm i 
-```
+// Describe how to install one of the packages
 
 <a name="usage"></a>
 
 ## Usage
 
-```
-node index.js -a aarch64 -p darwin # this make index.js compile for aarch64 darwin
-npm makePackages # this populates the npm/@libgs directory with all platforms
-npm clean # cleans the current projects
-```
+// Describe how to use one of the package
+
 
 <a name="team"></a>
 
@@ -93,3 +86,16 @@ Thank you to all people that encourage me every day.
 ## License
 
 Licensed under [Apache license V2](./LICENSE)
+
+[release]: https://github.com/NickNaso/libgs/releases
+[@libgs]: https://www.npmjs.com/org/libgs
+[@libgs/darwin-aarch64]: https://www.npmjs.com/package/@libgs/darwin-aarch64
+[@libgs/darwin-x64]: https://www.npmjs.com/package/@libgs/darwin-x64
+[@libgs/linux-armv7]: https://www.npmjs.com/package/@libgs/linux-armv7
+[@libgs/linux-amr64]: https://www.npmjs.com/package/@libgs/linux-arm64
+[@libgs/linux-x64]: https://www.npmjs.com/package/@libgs/linux-x64
+[@libgs/linux-musl-armv7]: https://www.npmjs.com/package/@libgs/linux-musl-x64
+[@libgs/linux-musl-arm64]: https://www.npmjs.com/package/@libgs/linux-musl-amr64
+[@libgs/linux-musl-x64]: https://www.npmjs.com/package/@libgs/linux-musl-armv7
+[@libgs/win32-x86]: https://www.npmjs.com/package/@libgs/win32-x86
+[@libgs/win32-x64]: https://www.npmjs.com/package/@libgs/win32-x84
