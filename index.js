@@ -131,8 +131,8 @@ async function main() {
       strict: true,
     });
 
-    let gsRelease = `gs10031`;
-    let gsDownloadFile = `ghostpdl-10.03.1.tar.gz`;
+    let gsRelease = "gs10031";
+    let gsDownloadFile = "ghostpdl-10.03.1.tar.gz";
     let gsDownload = `https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/${gsRelease}/${gsDownloadFile}`;
     const ghostpdlFolder = "ghostpdl";
 
@@ -163,7 +163,7 @@ async function main() {
     switch (targetPlatform) {
       case "windows":
         process.stdout.write("Building\n");
-        let selArch =
+        const selArch =
           targetArch === "x64"
             ? "WIN64"
             : targetArch === "x86"
@@ -188,7 +188,7 @@ async function main() {
       case "linux":
       case "darwin":
         process.stdout.write("Building\n");
-        let args = ["./configure"];
+        const args = ["./configure"];
         targetArch === "arm64"
           ? (targetArch = "aarch64")
           : (targetArch = targetArch);
@@ -200,7 +200,7 @@ async function main() {
         throw `Unknown platform: ${targetPlatform}\n`;
     }
 
-    process.stdout.write(`Done.\n`);
+    process.stdout.write("Done.\n");
   } catch (error) {
     process.stderr.write(`Error: ${error.message}\n`);
     process.exit(1);
