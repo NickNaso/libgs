@@ -4,6 +4,7 @@ export default [
       semi: "error",
       quotes: ["error", "double"],
       "prefer-const": "error",
+      "no-var": "error",
     },
   },
 ];
