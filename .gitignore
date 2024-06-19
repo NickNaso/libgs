@@ -134,3 +134,4 @@ ghost*.tar.gz
 /ghostpdl
 
 .DS_Store
+/npm/@libgs/*

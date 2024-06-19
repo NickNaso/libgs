@@ -9,9 +9,10 @@ const path = require("node:path");
  * @return {Promise<void>} A promise that resolves when the working directory is cleaned.
  */
 async function cleanWorkingDirectory() {
-  const files = await fs.readdir(path.join(process.cwd(), '/npm/@libgs'));
+  const currentPath = path.join(process.cwd(), "/npm/@libgs");
+  const files = await fs.readdir(currentPath);
   for (const file of files) {
-    await fs.rm(path.join(process.cwd(), '/npm/@libgs', file), {
+    await fs.rm(path.join(currentPath, file), {
       recursive: true,
       force: true,
     });
@@ -24,23 +25,18 @@ async function cleanWorkingDirectory() {
  * @return {Promise<void>} A promise that resolves when the working directory is populated.
  */
 async function makePackages() {
-
-  // In linux and onluy on linux we need to add "libc": [""] the dafult is libc and if compiled with musl we need to libc: ["musl"]
-  // https://docs.npmjs.com/cli/v10/configuring-npm/package-json
-  // https://docs.npmjs.com/cli/v10/using-npm/scripts
-
   const packageJson = {
     name: "@libgs/",
     version: "1.0",
     description: "",
-    mian: "index.js",
+    main: "index.js",
     scripts: {
       postinstall: "node postinstall.js",
     },
     os: [""],
     cpu: [""],
-    libc: ["glibc or musl"],
-    dependencies: {tar: "^6.1.0"},
+    libc: [""],
+    dependencies: { tar: "^7.2.0" },
   };
 
   const postInstallJS = `
@@ -95,45 +91,55 @@ async function makePackages() {
   };
 `;
 
-  // che ne dici di usare Map? https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map
-  const supportedPlatforms = {
-    darwin: ["aarch64", "x64"],
-    linux: ["x64", "arm64", "armv7"],
-    // musl
-    win32: ["x64", "x86"],
-  };
+  const supportedPlatforms = new Map([
+    ["darwin", ["aarch64", "x64"]],
+    ["linux", ["x64", "arm64", "armv7"]],
+    ["linux-musl", ["x64", "arm64"]],
+    ["win32", ["x64", "x86"]],
+  ]);
+
+  await fs.mkdir(path.join(process.cwd(), "npm", "@libgs"), {
+    recursive: true,
+  });
 
   process.stdout.write("Cleaning working directory...\n");
   await cleanWorkingDirectory();
 
   process.stdout.write("Populating working directory...\n");
-  for (const [platform, archs] of Object.entries(supportedPlatforms)) {
-    for (const arch of archs) {
-      const currentDir = `${platform}-${arch}`;
-      process.stdout.write(`Working on ${currentDir}\n`);
-      await fs.mkdir(path.join(process.cwd(), currentDir), { recursive: true });
+  process.chdir(path.join(process.cwd(), "npm", "@libgs"));
+  await Promise.all(
+    Array.from(supportedPlatforms.entries()).flatMap(([platform, archs]) =>
+      archs.map(async (arch) => {
+        const currentDir = `${platform}-${arch}`;
+        process.stdout.write(`Working on ${currentDir}\n`);
+        await fs.mkdir(path.join(process.cwd(), currentDir), {
+          recursive: true,
+        });
 
-      packageJson.name = `@libgs/${currentDir}`;
-      packageJson.arch = arch;
-      packageJson.os = [platform];
-      await fs.writeFile(
-        path.join(process.cwd(), currentDir, "package.json"),
-        JSON.stringify(packageJson, null, 2)
-      );
-      await fs.writeFile(
-        path.join(process.cwd(), currentDir, "index.js"),
-        indexJS
-      );
-      await fs.writeFile(
-        path.join(process.cwd(), currentDir, "postinstall.js"),
-        postInstallJS
-      );
-    }
-  }
+        const currentPackageJson = {
+          ...packageJson,
+          name: `@libgs/${currentDir}`,
+          arch,
+          os: [platform],
+        };
+        await fs.writeFile(
+          path.join(process.cwd(), currentDir, "package.json"),
+          JSON.stringify(currentPackageJson, null, 2)
+        );
+        await fs.writeFile(
+          path.join(process.cwd(), currentDir, "index.js"),
+          indexJS
+        );
+        await fs.writeFile(
+          path.join(process.cwd(), currentDir, "postinstall.js"),
+          postInstallJS
+        );
+      })
+    )
+  );
 }
 
-makePackages()
-.catch((err) => {
+makePackages().catch((err) => {
   console.error(err);
   process.exit(1);
 });
