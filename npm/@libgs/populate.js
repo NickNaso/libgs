@@ -3,6 +3,11 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
 
+/**
+ * Cleans the working directory by removing all files except for "populate.js" and ".gitignore".
+ *
+ * @return {Promise<void>} A promise that resolves when the working directory is cleaned.
+ */
 async function cleanWorkingDirectory() {
   const files = await fs.readdir(process.cwd());
   await Promise.all(
@@ -16,6 +21,11 @@ async function cleanWorkingDirectory() {
   );
 }
 
+/**
+ * Populates the working directory with directories and files for each supported platform and architecture.
+ *
+ * @return {Promise<void>} A promise that resolves when the working directory is populated.
+ */
 async function populate() {
   const packageJson = {
     name: "@libgs/",
@@ -29,6 +39,10 @@ async function populate() {
   const tar = require("tar");
   const fs = require("node:fs/promises");
   const path = require("node:path");
+  /**
+   * Extracts all .tar.gz files in the current working directory.
+   * @returns {Promise<void>} A promise that resolves when the extraction is complete.
+   */
   async function unzipArchive() {
     const files = await fs.readdir(process.cwd());
     const archiveFiles = files.filter((file) => file.endsWith(".tar.gz"));
@@ -50,6 +64,10 @@ async function populate() {
   "use strict";
   const fs = require("node:fs");
 
+  /**
+   * Gets the path to the libgs library.
+   * @returns {Promise<{path: string, files: string[]}>} A promise that resolves with the path to the libgs library.
+   */
   module.exports = async function getLibGSPath() {
     const fileList = [];
     const fileExtensions = [".dylib", ".so", ".a", ".dll"];

@@ -8,6 +8,14 @@ const { spawn } = require("node:child_process");
 const { parseArgs } = require("node:util");
 const os = require("os");
 
+/**
+ * Downloads a file from the given URL and saves it to the specified file path.
+ *
+ * @param {string} url - The URL of the file to download.
+ * @param {string} filePath - The path where the downloaded file will be saved.
+ * @return {Promise<void>} A promise that resolves when the download is complete.
+ * @throws {Error} If the download fails for any reason.
+ */
 async function downloadFile(url, filePath) {
   try {
     const res = await fetch(url);
@@ -23,6 +31,12 @@ async function downloadFile(url, filePath) {
   }
 }
 
+/**
+ * Creates a directory at the specified path.
+ *
+ * @param {string} directoryPath - The path where the directory will be created.
+ * @return {Promise<void>} A promise that resolves when the directory is created.
+ */
 async function createDirectory(directoryPath) {
   try {
     await mkdir(directoryPath);
@@ -33,6 +47,14 @@ async function createDirectory(directoryPath) {
   }
 }
 
+/**
+ * Extracts a .tar.gz file to the specified destination directory.
+ *
+ * @param {string} tarGzPath - The path of the .tar.gz file to extract.
+ * @param {string} destinationPath - The path where the extracted files will be saved.
+ * @return {Promise<void>} A promise that resolves when the extraction is complete.
+ * @throws {Error} If the extraction fails for any reason.
+ */
 async function extractTarGz(tarGzPath, destinationPath) {
   try {
     const rGSTarGz = createReadStream(tarGzPath);
@@ -50,6 +72,15 @@ async function extractTarGz(tarGzPath, destinationPath) {
   }
 }
 
+/**
+ * Runs a command asynchronously and returns a promise that resolves when the command completes.
+ *
+ * @param {string} command - The command to run.
+ * @param {Array} args - The arguments to pass to the command.
+ * @param {Object} options - The options to pass to the child process.
+ * @return {Promise<void>} A promise that resolves when the command completes.
+ * @throws {Error} If the command exits with a non-zero code.
+ */
 async function runCommand(command, args, options) {
   return new Promise((resolve, reject) => {
     const childProcess = spawn(command, args, options);
@@ -66,6 +97,12 @@ async function runCommand(command, args, options) {
   });
 }
 
+/**
+ * Asynchronously runs the main function.
+ *
+ * @return {Promise<void>} A promise that resolves when the main function completes.
+ * @throws {Error} If there is an error during the execution of the main function.
+ */
 async function main() {
   try {
     const options = {
