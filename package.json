@@ -13,7 +13,8 @@
     "start": "node index.js",
     "makePackages": "node makePackages.js",
     "clean": "node clean.js",
-    "lint": "eslint . --fix"
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "repository": {
     "type": "git",
