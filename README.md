@@ -50,7 +50,13 @@ The following platforms are supported:
 
 ## Installation
 
-// Describe how to install one of the packages
+### Download pre-compiled binary
+
+You can download the pre-compiled binary for each version from the [release][] page.
+
+### Compile from source
+
+If you want to compile the library from source, you can do it with `npm start`
 
 <a name="usage"></a>
 
