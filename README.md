@@ -52,7 +52,8 @@ The following platforms are supported:
 
 ### Download pre-compiled binary
 
-You can download the pre-compiled binary for each version from the [release][] page.
+You can download the pre-compiled binary for each version from the [release][] page,
+or you can do npm install <package-name> es. npm install win32-x64
 
 ### Compile from source
 
