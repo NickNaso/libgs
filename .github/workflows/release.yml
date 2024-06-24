@@ -10,18 +10,6 @@ jobs:
       - name: "Checkout"
         uses: actions/checkout@v4
 
-      - name: "Compile linux-musl"
-        uses: nickNaso/libgs/.github/workflows/linux-musl.yml@main
-
-      - name: "Compile linux"
-        uses: nickNaso/libgs/.github/workflows/linux.yml@main
-
-      - name: "Compile windows"
-        uses: nickNaso/libgs/.github/workflows/windows.yml@main
-
-      - name: "Compile macos"
-        uses: nickNaso/libgs/.github/workflows/macos.yml@main
-
       - name: "Create release"
         uses: softprops/action-gh-release@v1
 
