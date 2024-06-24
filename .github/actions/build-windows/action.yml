@@ -3,42 +3,6 @@ name: "Build Windows"
 runs:
   using: "docker"
   image: "Dockerfile"
-  
-  steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-
-    - name: Cache
-      uses: actions/cache@v4
-      id: npm-cache
-      with:
-        path: |
-            ~/.npm
-            node_modules/.cache
-        key: windows-node-${{ inputs.node-version }}-${{ hashFiles('**/package.json') }}
-        restore-keys: |
-            windows-node-${{ inputs.node-version }}-
-    
-    - name: Install Node.js ${{ inputs.node-version }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ inputs.node-version }}
-        cache: 'npm'
-        cache-dependency-path: package.json
-        
-    # - name: Install Node.js modules ...
-    #   shell: bash
-    #   run: npm install
-
-    # - name: Install Visual Studio
-    #   uses: ilammy/msvc-dev-cmd@v1
-
-    # - name: Build
-    #   shell: bash
-    #   run: node init.js --platform windows --arch ${{ inputs.arch }}
-
-    - name: Docker Setup Buildx
-      uses: docker/setup-buildx-action@v3.3.0
 
 
 inputs:
