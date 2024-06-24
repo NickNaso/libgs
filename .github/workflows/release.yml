@@ -12,6 +12,10 @@ jobs:
 
       - name: "Build for Windows"
         uses: ./.github/actions/build-windows
+        with:
+          arch: x64
+          os: windows-latest
+          node-version: 20.x
 
       # - name: "Create release"
       #   uses: softprops/action-gh-release@v1
