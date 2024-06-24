@@ -26,6 +26,7 @@ runs:
         cache-dependency-path: package.json
         
     - name: Install Node.js modules ...
+      shell: bash
       run: npm install
 
     - name: Install Visual Studio
