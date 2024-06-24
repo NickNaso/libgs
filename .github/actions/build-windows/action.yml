@@ -1,7 +1,7 @@
 name: "Build Windows"
 
 runs:
-  using: windows-latest
+  using: composite
   strategy:
     matrix:
       arch:
@@ -38,4 +38,5 @@ runs:
       uses: ilammy/msvc-dev-cmd@v1
 
     - name: Build
+      shell: bash
       run: node init.js --platform windows --arch ${{ matrix.arch }}
