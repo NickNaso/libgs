@@ -1,0 +1,34 @@
+name: "Release"
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    name: "Release"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v4
+
+      - name: "Compile linux-musl"
+        uses: ./.github/workflows/linux-musl.yml@main
+
+      - name: "Compile linux"
+        uses: ./.github/workflows/linux.yml@main
+
+      - name: "Compile windows"
+        uses: ./.github/workflows/windows.yml@main
+
+      - name: "Compile macos"
+        uses: ./.github/workflows/macos.yml@main
+
+      - name: "Create release"
+        uses: softprops/action-gh-release@v1
+
+      - name : "add release"
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            "gs-*-*.tar.gz"
