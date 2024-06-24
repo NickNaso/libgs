@@ -1,3 +1,3 @@
-FROM  windows/servercore:20H2
+FROM  node:20-windowsservercore
 
 RUN echo "Hello World"
