@@ -1,8 +1,9 @@
 name: "Build Windows"
 
 runs:
-  container:
-    image: './'
+  using: "docker"
+  image: "Dockerfile"
+  
   steps:
     - name: Checkout
       uses: actions/checkout@v4
