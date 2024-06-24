@@ -1,9 +1,16 @@
 name: "Build Windows"
 
 runs:
-  using: "docker"
-  image: "DockerFile"
+  steps:
+    - uses: actions/checkout@v4
 
+    - name: Build 
+      uses: philips-software/run-windows-docker-container-action@v1.1.0
+      with:
+        image: mcr.microsoft.com/windows/servercore:20H2
+        entrypoint: powershell.exe
+        run: >-
+          echo "Hello,World!";
 
 inputs:
   arch:
