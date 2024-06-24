@@ -11,16 +11,16 @@ jobs:
         uses: actions/checkout@v4
 
       - name: "Compile linux-musl"
-        uses: ./.github/workflows/linux-musl.yml@main
+        uses: ./.github/workflows/linux-musl.yml
 
       - name: "Compile linux"
-        uses: ./.github/workflows/linux.yml@main
+        uses: ./.github/workflows/linux.yml
 
       - name: "Compile windows"
-        uses: ./.github/workflows/windows.yml@main
+        uses: ./.github/workflows/windows.yml
 
       - name: "Compile macos"
-        uses: ./.github/workflows/macos.yml@main
+        uses: ./.github/workflows/macos.yml
 
       - name: "Create release"
         uses: softprops/action-gh-release@v1
