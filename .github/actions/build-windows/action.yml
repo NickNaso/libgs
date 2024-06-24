@@ -1,7 +1,7 @@
 name: "Build Windows"
 
 runs:
-  using: composite
+  using: windows-latest
   
   steps:
     - name: Checkout
