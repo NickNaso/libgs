@@ -2,22 +2,10 @@ name: "Release"
 on: [push]
 
 jobs:
-  release:
-    name: "Release"
-    runs-on: windows-latest
-
+  build:
+    runs-on: ubuntu-latest
     steps:
       - name: "Checkout"
         uses: actions/checkout@v4
 
-      - name: "Build for Windows"
-        uses: nickNaso/libgs/.github/workflows/build/windows.yml@main
-
-      # - name: "Create release"
-      #   uses: softprops/action-gh-release@v1
-
-      # - name : "add release"
-      #   uses: softprops/action-gh-release@v2
-      #   with:
-      #     files: |
-      #       "gs-*-*.tar.gz"
+      - uses: nickNaso/libgs/.github/workflows/builds/windows.yml@added-github-action-for-release

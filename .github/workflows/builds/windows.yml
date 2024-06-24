@@ -1,21 +1,17 @@
 name: "Build for Windows"
 
 on: [
-  workflow_dispatch,
+  workflow_call,
   pull_request
 ]
 
 jobs:
-  using: windows-latest
-  
-  run:
-    name: "Build for Windows"
+  reusable_workflow_job:
     runs-on: windows-latest
-    
     steps:
       - name: "Checkout"
         uses: actions/checkout@v4
 
-      - name: "Test"
+      - name: "Build"
         run: |
-          echo "Hello, World!"
+          echo "Hello World"
