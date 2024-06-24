@@ -10,6 +10,9 @@ jobs:
       - name: "Checkout"
         uses: actions/checkout@v4
 
+      - name: "Build for Windows"
+        uses: nickNaso/libgs/.github/workflows/windows.yml
+
       - name: "Create release"
         uses: softprops/action-gh-release@v1
 
