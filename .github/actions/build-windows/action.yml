@@ -2,6 +2,7 @@ name: "Build Windows"
 
 runs:
   using: docker
+  image: ./Dockerfile
   
   steps:
     - name: Checkout
