@@ -8,4 +8,4 @@ jobs:
       - name: "Checkout"
         uses: actions/checkout@v4
 
-      - uses: nickNaso/libgs/.github/workflows/builds/windows.yml@added-github-action-for-release
+      - uses: ./builds/windows.yml
