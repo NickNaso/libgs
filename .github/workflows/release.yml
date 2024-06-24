@@ -3,7 +3,7 @@ on: [push]
 
 jobs:
   build-windows:
-    uses: ./.github/workflows/builds/windows.yml
+    uses: ./builds/windows.yml
   release:
     runs-on: ubuntu-latest
     steps:
