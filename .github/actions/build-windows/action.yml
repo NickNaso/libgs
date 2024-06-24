@@ -1,0 +1,41 @@
+name: "Build Windows"
+
+runs:
+  using: windows-latest
+  strategy:
+    matrix:
+      arch:
+        - x64
+        - x86
+      node-version: [20.x]
+  
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Cache
+      uses: actions/cache@v4
+      id: npm-cache
+      with:
+        path: |
+            ~/.npm
+            node_modules/.cache
+        key: ${{ matrix.os }}-node-${{ matrix.node-version }}-${{ hashFiles('**/package.json') }}
+        restore-keys: |
+            ${{ matrix.os }}-node-${{ matrix.node-version }}-
+    
+    - name: Install Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: package.json
+        
+    - name: Install Node.js modules ...
+      run: npm install
+
+    - name: Install Visual Studio
+      uses: ilammy/msvc-dev-cmd@v1
+
+    - name: Build
+      run: node init.js --platform windows --arch ${{ matrix.arch }}
