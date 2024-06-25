@@ -135,3 +135,5 @@ ghost*.tar.gz
 
 .DS_Store
 /npm/@libgs/*
+
+/builds/*
