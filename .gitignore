@@ -137,3 +137,4 @@ ghost*.tar.gz
 /npm/@libgs/*
 
 /builds/*
+gs-*-*.tar.gz
