@@ -1,5 +1,5 @@
 name: "Release"
-on: [push]
+on: [workflow_call,push]
 
 jobs:
   build-windows:
@@ -11,7 +11,7 @@ jobs:
   build-linux-musl:
     uses: ./.github/workflows/linux-musl.yml
 
-  release:
+  test:
     runs-on: ubuntu-latest
     needs: [build-windows, build-macos, build-linux, build-linux-musl]
 
@@ -19,11 +19,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: get node modules
-        run: |
-          npm install
+      - name: Install dependencies
+        run: npm install
 
-      - name: Test
-        run: |
-          echo "HELLO,COLOMBO!\n"
+      - name: Start tests 
+        run: npm test
 
