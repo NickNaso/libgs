@@ -22,6 +22,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Download a Build Artifact
+        uses: actions/download-artifact@v4.1.7
+        with:
+          path: ./builds/
+
       - name: Start tests 
         run: npm test
 
