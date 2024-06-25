@@ -7,6 +7,7 @@ const tar = require("tar");
 const { spawn } = require("node:child_process");
 const { parseArgs } = require("node:util");
 const os = require("os");
+const path = require("node:path");
 
 /**
  * Downloads a file from the given URL and saves it to the specified file path.
@@ -98,6 +99,15 @@ async function runCommand(command, args, options) {
 }
 
 /**
+ * Creates an archive from the given path and name.
+ * @param {string} path the path of the archive
+ * @param {string} name the name of the archive
+ */
+async function createArchive(path, name) {
+  tar.create({ gzip: true }, [path]).pipe(createWriteStream(name));
+}
+
+/**
  * Asynchronously runs the main function.
  *
  * @return {Promise<void>} A promise that resolves when the main function completes.
@@ -184,6 +194,10 @@ async function main() {
           ["-f", "psi\\msvc32.mak", `${selArch}=`, "DEVSTUDIO=", "bsc"],
           { cwd: ghostpdlFolder }
         );
+        await createArchive(
+          path.join(ghostpdlFolder, "bin"),
+          `gs-windows-${targetArch}.tar.gz`
+        );
         break;
       case "linux":
       case "darwin":
@@ -195,6 +209,10 @@ async function main() {
         args.push(`--build=${targetArch}-${targetPlatform}-gnu`);
         await runCommand("sh", args, { cwd: ghostpdlFolder });
         await runCommand("make", ["libgs"], { cwd: ghostpdlFolder });
+        await createArchive(
+          path.join(ghostpdlFolder, "bin"),
+          `gs-${targetPlatform}-${targetArch}.tar.gz`
+        );
         break;
       default:
         throw `Unknown platform: ${targetPlatform}\n`;

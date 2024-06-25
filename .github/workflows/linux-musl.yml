@@ -1,5 +1,5 @@
 name: 'Build for linux-musl'
-on: [push, pull_request]
+on: [workflow_call ,pull_request]
 
 jobs:
     build:

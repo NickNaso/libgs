@@ -1,5 +1,5 @@
 name: 'Build for Windows'
-on: [push, pull_request]
+on: [workflow_call]
 
 jobs:
     build:
@@ -44,4 +44,9 @@ jobs:
           - name: Build
             run: | 
               node index.js -p windows -a ${{ matrix.architecture }}
-            
+
+          - name: Upload build Artifact
+            uses: actions/upload-artifact@v4
+            with:
+              name: gs-windows-${{ matrix.architecture }}.tar.gz
+              path: ./gs-windows-${{ matrix.architecture }}.tar.gz
