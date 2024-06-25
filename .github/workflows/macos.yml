@@ -45,4 +45,4 @@ jobs:
             uses: actions/upload-artifact@v4
             with:
               name: ${{ matrix.os == 'macos-latest' && 'gs-darwin-aarch64.tar.gz' || 'gs-darwin-x64.tar.gz' }}
-              path: ./
+              path: ./${{ matrix.os == 'macos-latest' && 'gs-darwin-aarch64.tar.gz' || 'gs-darwin-x64.tar.gz' }}
