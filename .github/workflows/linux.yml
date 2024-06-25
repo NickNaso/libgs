@@ -51,3 +51,9 @@ jobs:
             
             - name: Build
               run: node index.js -a ${{ matrix.architecture }}
+
+            - name: Upload build Artifact
+              uses: actions/upload-artifact@v4
+              with:
+                name: gs-linux-${{ matrix.architecture }}.tar.gz
+                path: ./
