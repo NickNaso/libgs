@@ -2,25 +2,16 @@ name: "Release"
 on: [workflow_call,push, pull_request]
 
 jobs:
-  build-windows:
-    uses: ./.github/workflows/windows.yml
-  build-macos:
-    uses: ./.github/workflows/macos.yml
-  build-linux:
-    uses: ./.github/workflows/linux.yml
-  build-linux-musl:
-    uses: ./.github/workflows/linux-musl.yml
 
-  test:
+  release:
     runs-on: ubuntu-latest
-    needs: [build-windows, build-macos, build-linux, build-linux-musl]
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: npm install
+      - name: win
+        uses: ./.github/workflows/windows.yml
 
       - name: Download a Build Artifact
         uses: actions/download-artifact@v4.1.7
