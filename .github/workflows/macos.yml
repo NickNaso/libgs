@@ -44,10 +44,5 @@ jobs:
           - name: Upload build Artifact
             uses: actions/upload-artifact@v4
             with:
-              name: |
-                if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
-                  gs-darwin-aarch64.tar.gz
-                else
-                  gs-darwin-x64.tar.gz
-                fi
+              name: ${{ matrix.os == 'macos-latest' && 'gs-darwin-aarch64.tar.gz' || 'gs-darwin-x64.tar.gz' }}
               path: ./
