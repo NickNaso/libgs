@@ -269,8 +269,8 @@ async function main() {
       strict: true,
     });
 
-    let gsRelease = "gs10031";
-    let gsDownloadFile = "ghostpdl-10.03.1.tar.gz";
+    let gsRelease = "gs10080";
+    let gsDownloadFile = "ghostpdl-10.08.0.tar.gz";
     let gsDownload = `https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/${gsRelease}/${gsDownloadFile}`;
     const ghostpdlFolder = "ghostpdl";
 
