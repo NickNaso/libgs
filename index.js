@@ -1,7 +1,7 @@
 "use strict";
 
 const { createWriteStream, createReadStream } = require("node:fs");
-const { unlink, mkdir, rm } = require("node:fs/promises");
+const { unlink, mkdir, rm, writeFile } = require("node:fs/promises");
 const { Readable } = require("node:stream");
 const tar = require("tar");
 const { spawn } = require("node:child_process");
@@ -108,6 +108,119 @@ async function createArchive(path, name) {
 }
 
 /**
+ * Zig target architectures, mapped to the names used by autoconf (--host)
+ * and by Node.js (process.arch), which name the @libgs packages.
+ */
+const zigArchs = new Map([
+  ["x86_64", { host: "x86_64", npm: "x64" }],
+  ["x86", { host: "i686", npm: "ia32" }],
+  ["aarch64", { host: "aarch64", npm: "arm64" }],
+  ["arm", { host: "arm", npm: "arm" }],
+  ["riscv64", { host: "riscv64", npm: "riscv64" }],
+  ["powerpc64le", { host: "powerpc64le", npm: "ppc64" }],
+  ["s390x", { host: "s390x", npm: "s390x" }],
+  ["loongarch64", { host: "loongarch64", npm: "loong64" }],
+]);
+
+/**
+ * Parses a Zig target triple, e.g. aarch64-linux-musl or x86_64-linux-gnu.2.17.
+ *
+ * @param {string} zigTarget - The Zig target triple.
+ * @return {{host: string, packageName: string}} The autoconf host triple and the package name.
+ * @throws {Error} If the target is not supported.
+ */
+function parseZigTarget(zigTarget) {
+  // The optional glibc version suffix (".2.17") is only meaningful to Zig.
+  const [arch, platform, abi = ""] = zigTarget.split(".")[0].split("-");
+  const archNames = zigArchs.get(arch);
+  if (!archNames || platform !== "linux" || !/^(gnu|musl)/.test(abi)) {
+    throw new Error(`Unsupported Zig target: ${zigTarget}`);
+  }
+  const libc = abi.startsWith("musl") ? "linux-musl" : "linux";
+  return {
+    host: `${archNames.host}-unknown-linux-${abi}`,
+    packageName: `${libc}-${archNames.npm}`,
+  };
+}
+
+/**
+ * Writes shell wrappers around the Zig toolchain for the given target.
+ * Some configure scripts (e.g. libtool's) mishandle multi-word tools such as
+ * CC="zig cc -target ...", so each tool becomes a single executable path.
+ *
+ * @param {string} zigTarget - The Zig target triple.
+ * @param {string} directoryPath - The directory where the wrappers will be written.
+ * @return {Promise<Object>} A promise that resolves with the tool variables (CC, AR, ...) and their paths.
+ */
+async function createZigWrappers(zigTarget, directoryPath) {
+  // zig cc enables UBSan on unoptimized code: the objects would reference
+  // __ubsan_* symbols that consumers of the static library cannot resolve.
+  const commands = {
+    CC: `zig cc -target ${zigTarget} -fno-sanitize=undefined`,
+    CXX: `zig c++ -target ${zigTarget} -fno-sanitize=undefined`,
+    AR: "zig ar",
+    RANLIB: "zig ranlib",
+    LD: "zig ld.lld",
+  };
+  await mkdir(directoryPath, { recursive: true });
+  const tools = {};
+  for (const [name, command] of Object.entries(commands)) {
+    tools[name] = path.join(directoryPath, name.toLowerCase());
+    await writeFile(tools[name], `#!/bin/sh\nexec ${command} "$@"\n`, {
+      mode: 0o755,
+    });
+  }
+  return tools;
+}
+
+/**
+ * Cross-compiles libgs with Zig and archives the result.
+ * The auxiliary tools run during the build are compiled with the host
+ * compiler, which configure detects (or reads from CCAUX).
+ *
+ * @param {string} zigTarget - The Zig target triple.
+ * @param {string} ghostpdlFolder - The folder containing the ghostpdl sources.
+ * @return {Promise<void>} A promise that resolves when the build is complete.
+ */
+async function buildWithZig(zigTarget, ghostpdlFolder) {
+  const { host, packageName } = parseZigTarget(zigTarget);
+  const tools = await createZigWrappers(
+    zigTarget,
+    path.resolve(ghostpdlFolder, "zig-bin")
+  );
+  await runCommand(
+    "sh",
+    [
+      "./configure",
+      `--host=${host}`,
+      ...Object.entries(tools).map(([name, tool]) => `${name}=${tool}`),
+      // Keep the library free of system dependencies. Tesseract is C++ and
+      // zig c++ uses libc++, which can't be mixed with libstdc++ consumers.
+      "--without-x",
+      "--disable-cups",
+      "--disable-dbus",
+      "--disable-gtk",
+      "--disable-fontconfig",
+      "--without-libidn",
+      "--without-libpaper",
+      "--without-tesseract",
+      "--without-pdftoraster",
+    ],
+    { cwd: ghostpdlFolder }
+  );
+  // The generated Makefile hard-codes AR=ar, ignoring configure.
+  await runCommand(
+    "make",
+    [`-j${os.availableParallelism()}`, `AR=${tools.AR}`, "libgs"],
+    { cwd: ghostpdlFolder }
+  );
+  await createArchive(
+    path.join(ghostpdlFolder, "bin"),
+    `gs-${packageName}.tar.gz`
+  );
+}
+
+/**
  * Asynchronously runs the main function.
  *
  * @return {Promise<void>} A promise that resolves when the main function completes.
@@ -133,6 +246,12 @@ async function main() {
         description: "Platform",
         short: "p",
         long: "platform",
+      },
+      zig: {
+        type: "string",
+        description: "Zig target to cross-compile for, e.g. aarch64-linux-musl",
+        short: "z",
+        long: "zig",
       },
     };
 
@@ -170,7 +289,11 @@ async function main() {
     await createDirectory(ghostpdlFolder);
     await extractTarGz(gsDownloadFile, ghostpdlFolder);
 
-    switch (targetPlatform) {
+    switch (values.zig ? "zig" : targetPlatform) {
+      case "zig":
+        process.stdout.write(`Building for ${values.zig} with Zig\n`);
+        await buildWithZig(values.zig, ghostpdlFolder);
+        break;
       case "windows":
         process.stdout.write("Building\n");
         const selArch =

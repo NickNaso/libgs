@@ -59,6 +59,19 @@ or you can do npm install <package-name> es. `npm install win32-x64`
 
 If you want to compile the library from source, you can do it with `npm start`
 
+### Cross-compile with Zig (experimental)
+
+On Linux, with [Zig][] 0.16 on the `PATH`, you can cross-compile for other
+Linux targets:
+
+```sh
+node index.js -z aarch64-linux-musl
+node index.js -z riscv64-linux-gnu
+node index.js -z x86_64-linux-gnu.2.17   # require glibc 2.17 or later
+```
+
+The archive is named after the package, e.g. `gs-linux-musl-arm64.tar.gz`.
+
 <a name="usage"></a>
 
 ## Usage
@@ -95,6 +108,7 @@ Thank you to all people that encourage me every day.
 Licensed under [Apache license V2](./LICENSE)
 
 [release]: https://github.com/NickNaso/libgs/releases
+[Zig]: https://ziglang.org/download/
 [@libgs]: https://www.npmjs.com/org/libgs
 [@libgs/darwin-aarch64]: https://www.npmjs.com/package/@libgs/darwin-aarch64
 [@libgs/darwin-x64]: https://www.npmjs.com/package/@libgs/darwin-x64
