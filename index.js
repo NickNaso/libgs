@@ -153,22 +153,31 @@ function parseZigTarget(zigTarget) {
  * @return {Promise<Object>} A promise that resolves with the tool variables (CC, AR, ...) and their paths.
  */
 async function createZigWrappers(zigTarget, directoryPath) {
+  // Of the -Wp,<arg> options zig cc only accepts the dependency ones, but
+  // ghostscript compiles freetype with -Wp,-w: pass -w instead.
+  const translateArgs = [
+    "for arg; do",
+    "  shift",
+    "  case \"$arg\" in",
+    "    -Wp,-w) set -- \"$@\" -w ;;",
+    "    *) set -- \"$@\" \"$arg\" ;;",
+    "  esac",
+    "done",
+  ].join("\n");
   // zig cc enables UBSan on unoptimized code: the objects would reference
   // __ubsan_* symbols that consumers of the static library cannot resolve.
-  const commands = {
-    CC: `zig cc -target ${zigTarget} -fno-sanitize=undefined`,
-    CXX: `zig c++ -target ${zigTarget} -fno-sanitize=undefined`,
-    AR: "zig ar",
-    RANLIB: "zig ranlib",
-    LD: "zig ld.lld",
+  const scripts = {
+    CC: `${translateArgs}\nexec zig cc -target ${zigTarget} -fno-sanitize=undefined "$@"`,
+    CXX: `${translateArgs}\nexec zig c++ -target ${zigTarget} -fno-sanitize=undefined "$@"`,
+    AR: "exec zig ar \"$@\"",
+    RANLIB: "exec zig ranlib \"$@\"",
+    LD: "exec zig ld.lld \"$@\"",
   };
   await mkdir(directoryPath, { recursive: true });
   const tools = {};
-  for (const [name, command] of Object.entries(commands)) {
+  for (const [name, script] of Object.entries(scripts)) {
     tools[name] = path.join(directoryPath, name.toLowerCase());
-    await writeFile(tools[name], `#!/bin/sh\nexec ${command} "$@"\n`, {
-      mode: 0o755,
-    });
+    await writeFile(tools[name], `#!/bin/sh\n${script}\n`, { mode: 0o755 });
   }
   return tools;
 }
