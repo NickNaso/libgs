@@ -16,6 +16,12 @@ jobs:
                   - target: aarch64-linux-musl
                     docker-platform: linux/arm64
                     image: alpine:3.20
+                  - target: armv7-linux-musleabihf
+                    docker-platform: linux/arm/v7
+                    image: alpine:3.20
+                  - target: armv6-linux-musleabihf
+                    docker-platform: linux/arm/v6
+                    image: alpine:3.20
                   - target: riscv64-linux-gnu
                     docker-platform: linux/riscv64
                     image: ubuntu:24.04

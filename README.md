@@ -26,20 +26,23 @@ The libraries ara distributed through the [release][] or the npm registry under
 
 The following platforms are supported:
 
-|                              | x86    | x64    | armv6  | armv7  | arm64  | 
-| ---------------------------- | ------ | ------ | ------ | ------ | ------ |
-| Windows                      | ✅     | ✅    |        |        |        |
-| macOS                        |        | ✅     |        |        | ✅    |
-| Linux gnu (glibc)            |        | ✅     | ✅    | ✅     | ✅    |
-| Linux  musl                  |        | ✅     | ✅    | ✅     | ✅    |
+|                              | x86    | x64    | armv6  | armv7  | arm64  | riscv64 |
+| ---------------------------- | ------ | ------ | ------ | ------ | ------ | ------- |
+| Windows                      | ✅     | ✅    |        |        |        |         |
+| macOS                        |        | ✅     |        |        | ✅    |         |
+| Linux gnu (glibc)            |        | ✅     | ✅    | ✅     | ✅    | ✅      |
+| Linux  musl                  |        | ✅     | ✅    | ✅     | ✅    |         |
 
 ### Packages
 
 - [@libgs/darwin-aarch64][]
 - [@libgs/darwin-x64][]
+- [@libgs/linux-armv6][]
 - [@libgs/linux-armv7][]
-- [@libgs/linux-amr64][]
+- [@libgs/linux-arm64][]
+- [@libgs/linux-riscv64][]
 - [@libgs/linux-x64][]
+- [@libgs/linux-musl-armv6][]
 - [@libgs/linux-musl-armv7][]
 - [@libgs/linux-musl-arm64][]
 - [@libgs/linux-musl-x64][]
@@ -68,9 +71,12 @@ Linux targets:
 node index.js -z aarch64-linux-musl
 node index.js -z riscv64-linux-gnu
 node index.js -z x86_64-linux-gnu.2.17   # require glibc 2.17 or later
+node index.js -z armv6-linux-musleabihf  # Raspberry Pi 1 and Zero
 ```
 
 The archive is named after the package, e.g. `gs-linux-musl-arm64.tar.gz`.
+For 32-bit ARM the target architecture can be `armv6` or `armv7` (`arm` is
+the same as `armv7`).
 
 <a name="usage"></a>
 
@@ -112,11 +118,14 @@ Licensed under [Apache license V2](./LICENSE)
 [@libgs]: https://www.npmjs.com/org/libgs
 [@libgs/darwin-aarch64]: https://www.npmjs.com/package/@libgs/darwin-aarch64
 [@libgs/darwin-x64]: https://www.npmjs.com/package/@libgs/darwin-x64
+[@libgs/linux-armv6]: https://www.npmjs.com/package/@libgs/linux-armv6
 [@libgs/linux-armv7]: https://www.npmjs.com/package/@libgs/linux-armv7
-[@libgs/linux-amr64]: https://www.npmjs.com/package/@libgs/linux-arm64
+[@libgs/linux-arm64]: https://www.npmjs.com/package/@libgs/linux-arm64
+[@libgs/linux-riscv64]: https://www.npmjs.com/package/@libgs/linux-riscv64
 [@libgs/linux-x64]: https://www.npmjs.com/package/@libgs/linux-x64
-[@libgs/linux-musl-armv7]: https://www.npmjs.com/package/@libgs/linux-musl-x64
-[@libgs/linux-musl-arm64]: https://www.npmjs.com/package/@libgs/linux-musl-amr64
-[@libgs/linux-musl-x64]: https://www.npmjs.com/package/@libgs/linux-musl-armv7
+[@libgs/linux-musl-armv6]: https://www.npmjs.com/package/@libgs/linux-musl-armv6
+[@libgs/linux-musl-armv7]: https://www.npmjs.com/package/@libgs/linux-musl-armv7
+[@libgs/linux-musl-arm64]: https://www.npmjs.com/package/@libgs/linux-musl-arm64
+[@libgs/linux-musl-x64]: https://www.npmjs.com/package/@libgs/linux-musl-x64
 [@libgs/win32-x86]: https://www.npmjs.com/package/@libgs/win32-x86
-[@libgs/win32-x64]: https://www.npmjs.com/package/@libgs/win32-x84
+[@libgs/win32-x64]: https://www.npmjs.com/package/@libgs/win32-x64

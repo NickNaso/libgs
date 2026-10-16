@@ -126,13 +126,18 @@ const selfContainedOptions = [
 
 /**
  * Zig target architectures, mapped to the names used by autoconf (--host)
- * and by Node.js (process.arch), which name the @libgs packages.
+ * and to the architecture in the @libgs package names, which is the Node.js
+ * one (process.arch) except for 32-bit ARM. Zig has no armv6 and armv7
+ * architectures: they are arm, whose baseline is armv7-a, plus a -mcpu.
  */
 const zigArchs = new Map([
   ["x86_64", { host: "x86_64", npm: "x64" }],
   ["x86", { host: "i686", npm: "ia32" }],
   ["aarch64", { host: "aarch64", npm: "arm64" }],
-  ["arm", { host: "arm", npm: "arm" }],
+  ["arm", { host: "arm", npm: "armv7" }],
+  ["armv7", { zig: "arm", host: "arm", npm: "armv7" }],
+  // The Raspberry Pi 1 and Zero CPU, the armv6 baseline of Alpine's armhf.
+  ["armv6", { zig: "arm", mcpu: "arm1176jzf_s", host: "arm", npm: "armv6" }],
   ["riscv64", { host: "riscv64", npm: "riscv64" }],
   ["powerpc64le", { host: "powerpc64le", npm: "ppc64" }],
   ["s390x", { host: "s390x", npm: "s390x" }],
@@ -141,20 +146,27 @@ const zigArchs = new Map([
 
 /**
  * Parses a Zig target triple, e.g. aarch64-linux-musl or x86_64-linux-gnu.2.17.
+ * The armv6 and armv7 architectures are also accepted, e.g.
+ * armv6-linux-musleabihf.
  *
- * @param {string} zigTarget - The Zig target triple.
- * @return {{host: string, packageName: string}} The autoconf host triple and the package name.
+ * @param {string} target - The Zig target triple.
+ * @return {{zigTarget: string, zigFlags: string[], host: string, packageName: string}}
+ * The triple and the flags for Zig, the autoconf host triple and the package name.
  * @throws {Error} If the target is not supported.
  */
-function parseZigTarget(zigTarget) {
+function parseZigTarget(target) {
   // The optional glibc version suffix (".2.17") is only meaningful to Zig.
-  const [arch, platform, abi = ""] = zigTarget.split(".")[0].split("-");
+  const [arch, platform, abi = ""] = target.split(".")[0].split("-");
   const archNames = zigArchs.get(arch);
   if (!archNames || platform !== "linux" || !/^(gnu|musl)/.test(abi)) {
-    throw new Error(`Unsupported Zig target: ${zigTarget}`);
+    throw new Error(`Unsupported Zig target: ${target}`);
   }
   const libc = abi.startsWith("musl") ? "linux-musl" : "linux";
   return {
+    zigTarget: archNames.zig
+      ? target.replace(arch, archNames.zig)
+      : target,
+    zigFlags: archNames.mcpu ? [`-mcpu=${archNames.mcpu}`] : [],
     host: `${archNames.host}-unknown-linux-${abi}`,
     packageName: `${libc}-${archNames.npm}`,
   };
@@ -166,10 +178,11 @@ function parseZigTarget(zigTarget) {
  * CC="zig cc -target ...", so each tool becomes a single executable path.
  *
  * @param {string} zigTarget - The Zig target triple.
+ * @param {string[]} zigFlags - The extra compiler flags for the target, e.g. -mcpu.
  * @param {string} directoryPath - The directory where the wrappers will be written.
  * @return {Promise<Object>} A promise that resolves with the tool variables (CC, AR, ...) and their paths.
  */
-async function createZigWrappers(zigTarget, directoryPath) {
+async function createZigWrappers(zigTarget, zigFlags, directoryPath) {
   // Of the -Wp,<arg> options zig cc only accepts the dependency ones, but
   // ghostscript compiles freetype with -Wp,-w: pass -w instead.
   const translateArgs = [
@@ -183,9 +196,10 @@ async function createZigWrappers(zigTarget, directoryPath) {
   ].join("\n");
   // zig cc enables UBSan on unoptimized code: the objects would reference
   // __ubsan_* symbols that consumers of the static library cannot resolve.
+  const targetFlags = ["-target", zigTarget, ...zigFlags].join(" ");
   const scripts = {
-    CC: `${translateArgs}\nexec zig cc -target ${zigTarget} -fno-sanitize=undefined "$@"`,
-    CXX: `${translateArgs}\nexec zig c++ -target ${zigTarget} -fno-sanitize=undefined "$@"`,
+    CC: `${translateArgs}\nexec zig cc ${targetFlags} -fno-sanitize=undefined "$@"`,
+    CXX: `${translateArgs}\nexec zig c++ ${targetFlags} -fno-sanitize=undefined "$@"`,
     AR: "exec zig ar \"$@\"",
     RANLIB: "exec zig ranlib \"$@\"",
     LD: "exec zig ld.lld \"$@\"",
@@ -204,14 +218,15 @@ async function createZigWrappers(zigTarget, directoryPath) {
  * The auxiliary tools run during the build are compiled with the host
  * compiler, which configure detects (or reads from CCAUX).
  *
- * @param {string} zigTarget - The Zig target triple.
+ * @param {string} target - The Zig target triple, see parseZigTarget.
  * @param {string} ghostpdlFolder - The folder containing the ghostpdl sources.
  * @return {Promise<void>} A promise that resolves when the build is complete.
  */
-async function buildWithZig(zigTarget, ghostpdlFolder) {
-  const { host, packageName } = parseZigTarget(zigTarget);
+async function buildWithZig(target, ghostpdlFolder) {
+  const { zigTarget, zigFlags, host, packageName } = parseZigTarget(target);
   const tools = await createZigWrappers(
     zigTarget,
+    zigFlags,
     path.resolve(ghostpdlFolder, "zig-bin")
   );
   await runCommand(
