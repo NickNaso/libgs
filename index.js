@@ -108,6 +108,23 @@ async function createArchive(path, name) {
 }
 
 /**
+ * configure options that keep libgs free of system dependencies, so that the
+ * static library links without them. Tesseract is C++: it would also require
+ * a C++ runtime, and zig c++ uses libc++ instead of the usual libstdc++.
+ */
+const selfContainedOptions = [
+  "--without-x",
+  "--disable-cups",
+  "--disable-dbus",
+  "--disable-gtk",
+  "--disable-fontconfig",
+  "--without-libidn",
+  "--without-libpaper",
+  "--without-tesseract",
+  "--without-pdftoraster",
+];
+
+/**
  * Zig target architectures, mapped to the names used by autoconf (--host)
  * and by Node.js (process.arch), which name the @libgs packages.
  */
@@ -203,17 +220,7 @@ async function buildWithZig(zigTarget, ghostpdlFolder) {
       "./configure",
       `--host=${host}`,
       ...Object.entries(tools).map(([name, tool]) => `${name}=${tool}`),
-      // Keep the library free of system dependencies. Tesseract is C++ and
-      // zig c++ uses libc++, which can't be mixed with libstdc++ consumers.
-      "--without-x",
-      "--disable-cups",
-      "--disable-dbus",
-      "--disable-gtk",
-      "--disable-fontconfig",
-      "--without-libidn",
-      "--without-libpaper",
-      "--without-tesseract",
-      "--without-pdftoraster",
+      ...selfContainedOptions,
     ],
     { cwd: ghostpdlFolder }
   );
@@ -339,6 +346,9 @@ async function main() {
           ? (targetArch = "aarch64")
           : (targetArch = targetArch);
         args.push(`--build=${targetArch}-${targetPlatform}-gnu`);
+        // Native builds also pick up libraries installed on the runner, e.g.
+        // Homebrew's fontconfig on macOS, which breaks the auxiliary tools.
+        args.push(...selfContainedOptions);
         await runCommand("sh", args, { cwd: ghostpdlFolder });
         await runCommand("make", ["libgs"], { cwd: ghostpdlFolder });
         await createArchive(
