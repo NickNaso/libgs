@@ -128,14 +128,17 @@ const selfContainedOptions = [
  * Zig target architectures, mapped to the names used by autoconf (--host)
  * and to the architecture in the @libgs package names, which is the Node.js
  * one (process.arch) except for 32-bit ARM. Zig has no armv6 and armv7
- * architectures: they are arm, whose baseline is armv7-a, plus a -mcpu.
+ * architectures: they are arm plus a -mcpu.
  */
+// Zig's arm baseline includes NEON, which armv7 distributions (Alpine armv7,
+// Debian armhf) do not require: their baseline is armv7-a with VFPv3-D16.
+const armv7 = { zig: "arm", mcpu: "generic+v7a+vfp3d16-neon-d32", host: "arm", npm: "armv7" };
 const zigArchs = new Map([
   ["x86_64", { host: "x86_64", npm: "x64" }],
   ["x86", { host: "i686", npm: "ia32" }],
   ["aarch64", { host: "aarch64", npm: "arm64" }],
-  ["arm", { host: "arm", npm: "armv7" }],
-  ["armv7", { zig: "arm", host: "arm", npm: "armv7" }],
+  ["arm", armv7],
+  ["armv7", armv7],
   // The Raspberry Pi 1 and Zero CPU, the armv6 baseline of Alpine's armhf.
   ["armv6", { zig: "arm", mcpu: "arm1176jzf_s", host: "arm", npm: "armv6" }],
   ["riscv64", { host: "riscv64", npm: "riscv64" }],
