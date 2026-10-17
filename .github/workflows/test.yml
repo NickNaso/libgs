@@ -12,6 +12,8 @@ jobs:
     uses: ./.github/workflows/linux-musl.yml
 
   test:
+    # The artifacts only exist once the builds have finished.
+    needs: [build-windows, build-macos, build-linux, build-linux-musl]
     runs-on: ubuntu-latest
 
     steps:

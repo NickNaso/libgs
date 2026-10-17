@@ -33,9 +33,6 @@ async function makePackages() {
     scripts: {
       postinstall: "node postinstall.js",
     },
-    os: [""],
-    cpu: [""],
-    libc: [""],
     dependencies: { tar: "^7.2.0" },
   };
 
@@ -52,7 +49,7 @@ async function makePackages() {
     const files = await fs.readdir(process.cwd());
     const archiveFiles = files.filter((file) => file.endsWith(".tar.gz"));
     for (const file of archiveFiles) {
-      tar.extract({
+      await tar.extract({
         file: path.join(process.cwd(), file),
         cwd: process.cwd(),
       });
@@ -93,9 +90,25 @@ async function makePackages() {
 
   const supportedPlatforms = new Map([
     ["darwin", ["aarch64", "x64"]],
-    ["linux", ["x64", "arm64", "armv7"]],
-    ["linux-musl", ["x64", "arm64"]],
+    ["linux", ["x64", "arm64", "armv6", "armv7", "riscv64"]],
+    ["linux-musl", ["x64", "arm64", "armv6", "armv7"]],
     ["win32", ["x64", "x86"]],
+  ]);
+
+  // The package names keep the historical architecture names, while npm
+  // matches the os, cpu and libc fields against process.platform,
+  // process.arch and the detected libc.
+  const npmArchs = new Map([
+    ["aarch64", "arm64"],
+    ["armv6", "arm"],
+    ["armv7", "arm"],
+    ["x86", "ia32"],
+  ]);
+  const platformFields = new Map([
+    ["darwin", { os: ["darwin"] }],
+    ["linux", { os: ["linux"], libc: ["glibc"] }],
+    ["linux-musl", { os: ["linux"], libc: ["musl"] }],
+    ["win32", { os: ["win32"] }],
   ]);
 
   await fs.mkdir(path.join(process.cwd(), "npm", "@libgs"), {
@@ -119,8 +132,8 @@ async function makePackages() {
         const currentPackageJson = {
           ...packageJson,
           name: `@libgs/${currentDir}`,
-          arch,
-          os: [platform],
+          ...platformFields.get(platform),
+          cpu: [npmArchs.get(arch) ?? arch],
         };
         await fs.writeFile(
           path.join(process.cwd(), currentDir, "package.json"),

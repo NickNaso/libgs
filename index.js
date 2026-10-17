@@ -1,7 +1,7 @@
 "use strict";
 
 const { createWriteStream, createReadStream } = require("node:fs");
-const { unlink, mkdir, rm } = require("node:fs/promises");
+const { unlink, mkdir, rm, writeFile } = require("node:fs/promises");
 const { Readable } = require("node:stream");
 const tar = require("tar");
 const { spawn } = require("node:child_process");
@@ -108,6 +108,157 @@ async function createArchive(path, name) {
 }
 
 /**
+ * configure options that keep libgs free of system dependencies, so that the
+ * static library links without them. Tesseract is C++: it would also require
+ * a C++ runtime, and zig c++ uses libc++ instead of the usual libstdc++.
+ */
+const selfContainedOptions = [
+  "--without-x",
+  "--disable-cups",
+  "--disable-dbus",
+  "--disable-gtk",
+  "--disable-fontconfig",
+  "--without-libidn",
+  "--without-libpaper",
+  "--without-tesseract",
+  "--without-pdftoraster",
+];
+
+/**
+ * Zig target architectures, mapped to the names used by autoconf (--host)
+ * and to the architecture in the @libgs package names, which is the Node.js
+ * one (process.arch) except for 32-bit ARM. Zig has no armv6 and armv7
+ * architectures: they are arm plus a -mcpu.
+ */
+// Zig's arm baseline includes NEON, which armv7 distributions (Alpine armv7,
+// Debian armhf) do not require: their baseline is armv7-a with VFPv3-D16.
+const armv7 = { zig: "arm", mcpu: "generic+v7a+vfp3d16-neon-d32", host: "arm", npm: "armv7" };
+const zigArchs = new Map([
+  ["x86_64", { host: "x86_64", npm: "x64" }],
+  ["x86", { host: "i686", npm: "ia32" }],
+  ["aarch64", { host: "aarch64", npm: "arm64" }],
+  ["arm", armv7],
+  ["armv7", armv7],
+  // The Raspberry Pi 1 and Zero CPU, the armv6 baseline of Alpine's armhf.
+  ["armv6", { zig: "arm", mcpu: "arm1176jzf_s", host: "arm", npm: "armv6" }],
+  ["riscv64", { host: "riscv64", npm: "riscv64" }],
+  ["powerpc64le", { host: "powerpc64le", npm: "ppc64" }],
+  ["s390x", { host: "s390x", npm: "s390x" }],
+  ["loongarch64", { host: "loongarch64", npm: "loong64" }],
+]);
+
+/**
+ * Parses a Zig target triple, e.g. aarch64-linux-musl or x86_64-linux-gnu.2.17.
+ * The armv6 and armv7 architectures are also accepted, e.g.
+ * armv6-linux-musleabihf.
+ *
+ * @param {string} target - The Zig target triple.
+ * @return {{zigTarget: string, zigFlags: string[], host: string, packageName: string}}
+ * The triple and the flags for Zig, the autoconf host triple and the package name.
+ * @throws {Error} If the target is not supported.
+ */
+function parseZigTarget(target) {
+  // The optional glibc version suffix (".2.17") is only meaningful to Zig.
+  const [arch, platform, abi = ""] = target.split(".")[0].split("-");
+  const archNames = zigArchs.get(arch);
+  if (!archNames || platform !== "linux" || !/^(gnu|musl)/.test(abi)) {
+    throw new Error(`Unsupported Zig target: ${target}`);
+  }
+  const libc = abi.startsWith("musl") ? "linux-musl" : "linux";
+  return {
+    zigTarget: archNames.zig
+      ? target.replace(arch, archNames.zig)
+      : target,
+    zigFlags: archNames.mcpu ? [`-mcpu=${archNames.mcpu}`] : [],
+    host: `${archNames.host}-unknown-linux-${abi}`,
+    packageName: `${libc}-${archNames.npm}`,
+  };
+}
+
+/**
+ * Writes shell wrappers around the Zig toolchain for the given target.
+ * Some configure scripts (e.g. libtool's) mishandle multi-word tools such as
+ * CC="zig cc -target ...", so each tool becomes a single executable path.
+ *
+ * @param {string} zigTarget - The Zig target triple.
+ * @param {string[]} zigFlags - The extra compiler flags for the target, e.g. -mcpu.
+ * @param {string} directoryPath - The directory where the wrappers will be written.
+ * @return {Promise<Object>} A promise that resolves with the tool variables (CC, AR, ...) and their paths.
+ */
+async function createZigWrappers(zigTarget, zigFlags, directoryPath) {
+  // Of the -Wp,<arg> options zig cc only accepts the dependency ones, but
+  // ghostscript compiles freetype with -Wp,-w: pass -w instead.
+  // ghostscript also compiles everything with
+  // -Werror=declaration-after-statement, which brotli's decoder violates on
+  // ARMv7 (BROTLI_HC_MARK_TABLE_FOR_FAST_LOAD): drop it.
+  const translateArgs = [
+    "for arg; do",
+    "  shift",
+    "  case \"$arg\" in",
+    "    -Wp,-w) set -- \"$@\" -w ;;",
+    "    -Werror=declaration-after-statement) ;;",
+    "    *) set -- \"$@\" \"$arg\" ;;",
+    "  esac",
+    "done",
+  ].join("\n");
+  // zig cc enables UBSan on unoptimized code: the objects would reference
+  // __ubsan_* symbols that consumers of the static library cannot resolve.
+  const targetFlags = ["-target", zigTarget, ...zigFlags].join(" ");
+  const scripts = {
+    CC: `${translateArgs}\nexec zig cc ${targetFlags} -fno-sanitize=undefined "$@"`,
+    CXX: `${translateArgs}\nexec zig c++ ${targetFlags} -fno-sanitize=undefined "$@"`,
+    AR: "exec zig ar \"$@\"",
+    RANLIB: "exec zig ranlib \"$@\"",
+    LD: "exec zig ld.lld \"$@\"",
+  };
+  await mkdir(directoryPath, { recursive: true });
+  const tools = {};
+  for (const [name, script] of Object.entries(scripts)) {
+    tools[name] = path.join(directoryPath, name.toLowerCase());
+    await writeFile(tools[name], `#!/bin/sh\n${script}\n`, { mode: 0o755 });
+  }
+  return tools;
+}
+
+/**
+ * Cross-compiles libgs with Zig and archives the result.
+ * The auxiliary tools run during the build are compiled with the host
+ * compiler, which configure detects (or reads from CCAUX).
+ *
+ * @param {string} target - The Zig target triple, see parseZigTarget.
+ * @param {string} ghostpdlFolder - The folder containing the ghostpdl sources.
+ * @return {Promise<void>} A promise that resolves when the build is complete.
+ */
+async function buildWithZig(target, ghostpdlFolder) {
+  const { zigTarget, zigFlags, host, packageName } = parseZigTarget(target);
+  const tools = await createZigWrappers(
+    zigTarget,
+    zigFlags,
+    path.resolve(ghostpdlFolder, "zig-bin")
+  );
+  await runCommand(
+    "sh",
+    [
+      "./configure",
+      `--host=${host}`,
+      ...Object.entries(tools).map(([name, tool]) => `${name}=${tool}`),
+      ...selfContainedOptions,
+    ],
+    { cwd: ghostpdlFolder }
+  );
+  // The generated Makefile hard-codes AR=ar, ignoring configure.
+  await runCommand(
+    "make",
+    [`-j${os.availableParallelism()}`, `AR=${tools.AR}`, "libgs"],
+    { cwd: ghostpdlFolder }
+  );
+  await createArchive(
+    path.join(ghostpdlFolder, "bin"),
+    `gs-${packageName}.tar.gz`
+  );
+}
+
+/**
  * Asynchronously runs the main function.
  *
  * @return {Promise<void>} A promise that resolves when the main function completes.
@@ -134,6 +285,12 @@ async function main() {
         short: "p",
         long: "platform",
       },
+      zig: {
+        type: "string",
+        description: "Zig target to cross-compile for, e.g. aarch64-linux-musl",
+        short: "z",
+        long: "zig",
+      },
     };
 
     const { values } = parseArgs({
@@ -141,8 +298,8 @@ async function main() {
       strict: true,
     });
 
-    let gsRelease = "gs10031";
-    let gsDownloadFile = "ghostpdl-10.03.1.tar.gz";
+    let gsRelease = "gs10080";
+    let gsDownloadFile = "ghostpdl-10.08.0.tar.gz";
     let gsDownload = `https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/${gsRelease}/${gsDownloadFile}`;
     const ghostpdlFolder = "ghostpdl";
 
@@ -170,7 +327,11 @@ async function main() {
     await createDirectory(ghostpdlFolder);
     await extractTarGz(gsDownloadFile, ghostpdlFolder);
 
-    switch (targetPlatform) {
+    switch (values.zig ? "zig" : targetPlatform) {
+      case "zig":
+        process.stdout.write(`Building for ${values.zig} with Zig\n`);
+        await buildWithZig(values.zig, ghostpdlFolder);
+        break;
       case "windows":
         process.stdout.write("Building\n");
         const selArch =
@@ -207,6 +368,9 @@ async function main() {
           ? (targetArch = "aarch64")
           : (targetArch = targetArch);
         args.push(`--build=${targetArch}-${targetPlatform}-gnu`);
+        // Native builds also pick up libraries installed on the runner, e.g.
+        // Homebrew's fontconfig on macOS, which breaks the auxiliary tools.
+        args.push(...selfContainedOptions);
         await runCommand("sh", args, { cwd: ghostpdlFolder });
         await runCommand("make", ["libgs"], { cwd: ghostpdlFolder });
         await createArchive(
