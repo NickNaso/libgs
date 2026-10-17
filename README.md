@@ -56,7 +56,28 @@ The following platforms are supported:
 ### Download pre-compiled binary
 
 You can download the pre-compiled binary for each version from the [release][] page,
-or you can do npm install <package-name> es. `npm install win32-x64`
+or you can do npm install <package-name> es. `npm install @libgs/win32-x64`
+
+The npm packages contain the libraries, in their `lib` directory, and have no
+install scripts. Like [esbuild][]'s platform packages, they declare their
+`os`, `cpu` and `libc`, so npm only installs the package matching the
+system.
+
+### Create the npm packages
+
+Publishing a GitHub release builds the libraries and uploads the archives,
+named `gs-<platform>-<arch>.tar.gz` after the packages, to the release. Then
+
+```sh
+npm run makePackages                        # from the latest release
+npm run makePackages -- --tag v0.0.14       # from a given release
+```
+
+downloads the archives of the release, checks their size and SHA-256 digest
+and creates a package in `npm/@libgs` for each archive, with the version of
+the release (`--version` sets another one). Platforms without an archive in
+the release are skipped. Set `GITHUB_TOKEN` if the GitHub API rate limit is
+reached.
 
 ### Compile from source
 
@@ -115,6 +136,7 @@ Licensed under [Apache license V2](./LICENSE)
 
 [release]: https://github.com/NickNaso/libgs/releases
 [Zig]: https://ziglang.org/download/
+[esbuild]: https://esbuild.github.io/getting-started/#install-esbuild
 [@libgs]: https://www.npmjs.com/org/libgs
 [@libgs/darwin-aarch64]: https://www.npmjs.com/package/@libgs/darwin-aarch64
 [@libgs/darwin-x64]: https://www.npmjs.com/package/@libgs/darwin-x64

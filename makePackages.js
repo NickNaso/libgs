@@ -1,155 +1,236 @@
 "use strict";
 
+const { createHash } = require("node:crypto");
 const fs = require("node:fs/promises");
+const os = require("node:os");
 const path = require("node:path");
+const { parseArgs } = require("node:util");
+const tar = require("tar");
+
+const repository = "NickNaso/libgs";
+const packagesDir = path.join(__dirname, "npm", "@libgs");
+
+const supportedPlatforms = new Map([
+  ["darwin", ["aarch64", "x64"]],
+  ["linux", ["x64", "arm64", "armv6", "armv7", "riscv64"]],
+  ["linux-musl", ["x64", "arm64", "armv6", "armv7"]],
+  ["win32", ["x64", "x86"]],
+]);
+
+// The package names keep the historical architecture names, while npm
+// matches the os, cpu and libc fields against process.platform,
+// process.arch and the detected libc.
+const npmArchs = new Map([
+  ["aarch64", "arm64"],
+  ["armv6", "arm"],
+  ["armv7", "arm"],
+  ["x86", "ia32"],
+]);
+const platformFields = new Map([
+  ["darwin", { os: ["darwin"] }],
+  ["linux", { os: ["linux"], libc: ["glibc"] }],
+  ["linux-musl", { os: ["linux"], libc: ["musl"] }],
+  ["win32", { os: ["win32"] }],
+]);
+
+// Only the libraries are published: the archives also contain executables
+// and, for shared libraries, symbolic links, which npm does not pack.
+const libraryPattern = /\.(a|lib|dll|dylib)$|\.so(\.\d+)*$/;
 
 /**
- * Cleans the working directory by removing all files.
+ * Gets a release of the repository from the GitHub API.
+ * GITHUB_TOKEN, when set, raises the rate limit of the API.
  *
- * @return {Promise<void>} A promise that resolves when the working directory is cleaned.
+ * @param {string} [tag] - The tag of the release, the latest release when omitted.
+ * @return {Promise<Object>} A promise that resolves with the release.
+ * @throws {Error} If the release cannot be fetched.
  */
-async function cleanWorkingDirectory() {
-  const currentPath = path.join(process.cwd(), "/npm/@libgs");
-  const files = await fs.readdir(currentPath);
-  for (const file of files) {
-    await fs.rm(path.join(currentPath, file), {
-      recursive: true,
-      force: true,
-    });
+async function getRelease(tag) {
+  const url = tag
+    ? `https://api.github.com/repos/${repository}/releases/tags/${encodeURIComponent(tag)}`
+    : `https://api.github.com/repos/${repository}/releases/latest`;
+  const headers = { Accept: "application/vnd.github+json" };
+  if (process.env.GITHUB_TOKEN) {
+    headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
   }
+  const res = await fetch(url, { headers });
+  if (!res.ok) {
+    throw new Error(`Failed to get the release from ${url}: ${res.status}`);
+  }
+  return res.json();
 }
 
 /**
- * Populates the working directory with directories and files for each supported platform and architecture.
+ * Downloads a release asset and checks it against the size and the SHA-256
+ * digest reported by GitHub.
  *
- * @return {Promise<void>} A promise that resolves when the working directory is populated.
+ * @param {Object} asset - The release asset, as returned by the GitHub API.
+ * @param {string} filePath - The path where the asset will be saved.
+ * @return {Promise<void>} A promise that resolves when the asset is saved.
+ * @throws {Error} If the download fails or the asset does not match.
  */
-async function makePackages() {
-  const packageJson = {
-    name: "@libgs/",
-    version: "1.0",
-    description: "",
-    main: "index.js",
-    scripts: {
-      postinstall: "node postinstall.js",
-    },
-    dependencies: { tar: "^7.2.0" },
-  };
-
-  const postInstallJS = `
-  "use strict";
-  const tar = require("tar");
-  const fs = require("node:fs/promises");
-  const path = require("node:path");
-  /**
-   * Extracts all .tar.gz files in the current working directory.
-   * @returns {Promise<void>} A promise that resolves when the extraction is complete.
-   */
-  async function unzipArchive() {
-    const files = await fs.readdir(process.cwd());
-    const archiveFiles = files.filter((file) => file.endsWith(".tar.gz"));
-    for (const file of archiveFiles) {
-      await tar.extract({
-        file: path.join(process.cwd(), file),
-        cwd: process.cwd(),
-      });
+async function downloadAsset(asset, filePath) {
+  const res = await fetch(asset.browser_download_url);
+  if (!res.ok) {
+    throw new Error(`Failed to download ${asset.name}: ${res.status}`);
+  }
+  const data = Buffer.from(await res.arrayBuffer());
+  if (data.length !== asset.size) {
+    throw new Error(
+      `${asset.name} is ${data.length} bytes, the release reports ${asset.size}`
+    );
+  }
+  // Older releases have no digest.
+  if (asset.digest) {
+    const digest = `sha256:${createHash("sha256").update(data).digest("hex")}`;
+    if (digest !== asset.digest) {
+      throw new Error(`${asset.name} does not match ${asset.digest}`);
     }
   }
+  await fs.writeFile(filePath, data);
+}
 
-  unzipArchive().catch((err) => {
-    console.error(err);
-    process.exit(1);
+/**
+ * Extracts the libraries in ghostpdl/bin of an archive built by index.js.
+ *
+ * @param {string} archivePath - The path of the .tar.gz archive.
+ * @param {string} destinationPath - The directory where the libraries will be saved.
+ * @return {Promise<string[]>} A promise that resolves with the names of the extracted libraries.
+ * @throws {Error} If the archive contains no library.
+ */
+async function extractLibraries(archivePath, destinationPath) {
+  const files = [];
+  await fs.mkdir(destinationPath, { recursive: true });
+  await tar.x({
+    file: archivePath,
+    cwd: destinationPath,
+    strip: 2,
+    filter: (entryPath, entry) => {
+      const match = /^(?:\.\/)?ghostpdl\/bin\/([^/]+)$/.exec(entryPath);
+      const keep =
+        entry.type === "File" && match !== null && libraryPattern.test(match[1]);
+      if (keep) files.push(match[1]);
+      return keep;
+    },
   });
-`;
+  if (files.length === 0) {
+    throw new Error(`${path.basename(archivePath)} contains no library`);
+  }
+  return files.sort();
+}
 
-  const indexJS = `
-  "use strict";
-  const fs = require("node:fs");
-
-  /**
-   * Gets the path to the libgs library.
-   * @returns {Promise<{path: string, files: string[]}>} A promise that resolves with the path to the libgs library.
-   */
-  module.exports = async function getLibGSPath() {
-    const fileList = [];
-    const fileExtensions = [".dylib", ".so", ".a", ".dll"];
-
-    const files = await fs.promises.readdir(__dirname);
-    for (const file of files) {
-      if (fileExtensions.some((ext) => file.endsWith(ext))) {
-        fileList.push(file);
-      }
-    }
-
-    return {
-      path: __dirname,
-      files: fileList,
-    };
+/**
+ * Writes the package.json and the index.js of a platform package.
+ * The package has no install scripts: the libraries are already in it, and
+ * npm installs only the package matching the os, cpu and libc fields.
+ *
+ * @param {string} packageDir - The directory of the package.
+ * @param {string} platform - The platform, a key of supportedPlatforms.
+ * @param {string} arch - The architecture in the package name.
+ * @param {string} version - The version of the package.
+ * @param {string[]} files - The names of the libraries in the lib directory.
+ * @return {Promise<void>} A promise that resolves when the files are written.
+ */
+async function writePackageFiles(packageDir, platform, arch, version, files) {
+  const packageJson = {
+    name: `@libgs/${platform}-${arch}`,
+    version,
+    description: `Ghostscript library (libgs) for ${platform} ${arch}`,
+    repository: {
+      type: "git",
+      url: `git+https://github.com/${repository}.git`,
+    },
+    main: "index.js",
+    files: ["index.js", "lib"],
+    // Yarn Plug'n'Play leaves the libraries on disk instead of in a zip.
+    preferUnplugged: true,
+    ...platformFields.get(platform),
+    cpu: [npmArchs.get(arch) ?? arch],
   };
+  const indexJS = `"use strict";
+const path = require("node:path");
+
+/**
+ * Gets the path to the libgs library.
+ * @returns {Promise<{path: string, files: string[]}>} A promise that resolves with the directory of the libraries and their names.
+ */
+module.exports = async function getLibGSPath() {
+  return {
+    path: path.join(__dirname, "lib"),
+    files: ${JSON.stringify(files)},
+  };
+};
 `;
+  await fs.writeFile(
+    path.join(packageDir, "package.json"),
+    `${JSON.stringify(packageJson, null, 2)}\n`
+  );
+  await fs.writeFile(path.join(packageDir, "index.js"), indexJS);
+}
 
-  const supportedPlatforms = new Map([
-    ["darwin", ["aarch64", "x64"]],
-    ["linux", ["x64", "arm64", "armv6", "armv7", "riscv64"]],
-    ["linux-musl", ["x64", "arm64", "armv6", "armv7"]],
-    ["win32", ["x64", "x86"]],
-  ]);
-
-  // The package names keep the historical architecture names, while npm
-  // matches the os, cpu and libc fields against process.platform,
-  // process.arch and the detected libc.
-  const npmArchs = new Map([
-    ["aarch64", "arm64"],
-    ["armv6", "arm"],
-    ["armv7", "arm"],
-    ["x86", "ia32"],
-  ]);
-  const platformFields = new Map([
-    ["darwin", { os: ["darwin"] }],
-    ["linux", { os: ["linux"], libc: ["glibc"] }],
-    ["linux-musl", { os: ["linux"], libc: ["musl"] }],
-    ["win32", { os: ["win32"] }],
-  ]);
-
-  await fs.mkdir(path.join(process.cwd(), "npm", "@libgs"), {
-    recursive: true,
+/**
+ * Creates a package in npm/@libgs for each supported platform and
+ * architecture whose archive (gs-<platform>-<arch>.tar.gz) is in the release.
+ *
+ * @return {Promise<void>} A promise that resolves when the packages are created.
+ * @throws {Error} If the release has none of the archives.
+ */
+async function makePackages() {
+  const { values } = parseArgs({
+    options: {
+      // The release tag, e.g. v0.0.14; the latest release when omitted.
+      tag: { type: "string", short: "t" },
+      // The version of the packages; the tag without the leading v when omitted.
+      version: { type: "string" },
+    },
+    strict: true,
   });
+
+  const release = await getRelease(values.tag);
+  const version = values.version ?? release.tag_name.replace(/^v/, "");
+  const assets = new Map(release.assets.map((asset) => [asset.name, asset]));
+  process.stdout.write(
+    `Creating the packages ${version} from the release ${release.tag_name}\n`
+  );
 
   process.stdout.write("Cleaning working directory...\n");
-  await cleanWorkingDirectory();
+  await fs.rm(packagesDir, { recursive: true, force: true });
+  await fs.mkdir(packagesDir, { recursive: true });
 
-  process.stdout.write("Populating working directory...\n");
-  process.chdir(path.join(process.cwd(), "npm", "@libgs"));
-  await Promise.all(
-    Array.from(supportedPlatforms.entries()).flatMap(([platform, archs]) =>
-      archs.map(async (arch) => {
-        const currentDir = `${platform}-${arch}`;
-        process.stdout.write(`Working on ${currentDir}\n`);
-        await fs.mkdir(path.join(process.cwd(), currentDir), {
-          recursive: true,
-        });
-
-        const currentPackageJson = {
-          ...packageJson,
-          name: `@libgs/${currentDir}`,
-          ...platformFields.get(platform),
-          cpu: [npmArchs.get(arch) ?? arch],
-        };
-        await fs.writeFile(
-          path.join(process.cwd(), currentDir, "package.json"),
-          JSON.stringify(currentPackageJson, null, 2)
-        );
-        await fs.writeFile(
-          path.join(process.cwd(), currentDir, "index.js"),
-          indexJS
-        );
-        await fs.writeFile(
-          path.join(process.cwd(), currentDir, "postinstall.js"),
-          postInstallJS
-        );
-      })
-    )
-  );
+  const downloadDir = await fs.mkdtemp(path.join(os.tmpdir(), "libgs-"));
+  try {
+    const created = await Promise.all(
+      Array.from(supportedPlatforms.entries()).flatMap(([platform, archs]) =>
+        archs.map(async (arch) => {
+          const name = `${platform}-${arch}`;
+          const asset = assets.get(`gs-${name}.tar.gz`);
+          if (!asset) {
+            process.stdout.write(
+              `Skipping @libgs/${name}: the release has no gs-${name}.tar.gz\n`
+            );
+            return false;
+          }
+          process.stdout.write(`Working on @libgs/${name}\n`);
+          const archivePath = path.join(downloadDir, asset.name);
+          await downloadAsset(asset, archivePath);
+          const packageDir = path.join(packagesDir, name);
+          const files = await extractLibraries(
+            archivePath,
+            path.join(packageDir, "lib")
+          );
+          await writePackageFiles(packageDir, platform, arch, version, files);
+          return true;
+        })
+      )
+    );
+    if (!created.includes(true)) {
+      throw new Error(
+        `The release ${release.tag_name} has no gs-<platform>-<arch>.tar.gz archive`
+      );
+    }
+  } finally {
+    await fs.rm(downloadDir, { recursive: true, force: true });
+  }
 }
 
 makePackages().catch((err) => {
