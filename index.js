@@ -188,11 +188,15 @@ function parseZigTarget(target) {
 async function createZigWrappers(zigTarget, zigFlags, directoryPath) {
   // Of the -Wp,<arg> options zig cc only accepts the dependency ones, but
   // ghostscript compiles freetype with -Wp,-w: pass -w instead.
+  // ghostscript also compiles everything with
+  // -Werror=declaration-after-statement, which brotli's decoder violates on
+  // ARMv7 (BROTLI_HC_MARK_TABLE_FOR_FAST_LOAD): drop it.
   const translateArgs = [
     "for arg; do",
     "  shift",
     "  case \"$arg\" in",
     "    -Wp,-w) set -- \"$@\" -w ;;",
+    "    -Werror=declaration-after-statement) ;;",
     "    *) set -- \"$@\" \"$arg\" ;;",
     "  esac",
     "done",
