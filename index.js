@@ -357,7 +357,7 @@ async function main() {
         );
         await createArchive(
           path.join(ghostpdlFolder, "bin"),
-          `gs-windows-${targetArch}.tar.gz`
+          `gs-win32-${targetArch}.tar.gz`
         );
         break;
       case "linux":
