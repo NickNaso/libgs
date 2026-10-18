@@ -58,8 +58,9 @@ The following platforms are supported:
 You can download the pre-compiled binary for each version from the [release][] page,
 or you can do npm install <package-name> es. `npm install @libgs/win32-x64`
 
-The npm packages contain the libraries, in their `lib` directory, and have no
-install scripts. Like [esbuild][]'s platform packages, they declare their
+The npm packages contain the libraries, in their `lib` directory, and the
+headers of the Ghostscript API (`iapi.h`, `ierrors.h`, `gserrors.h` and
+`gdevdsp.h`), in their `include` directory, and have no install scripts. Like [esbuild][]'s platform packages, they declare their
 `os`, `cpu` and `libc`, so npm only installs the package matching the
 system.
 

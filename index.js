@@ -1,7 +1,7 @@
 "use strict";
 
 const { createWriteStream, createReadStream } = require("node:fs");
-const { unlink, mkdir, rm, writeFile } = require("node:fs/promises");
+const { unlink, mkdir, rm, writeFile, copyFile } = require("node:fs/promises");
 const { Readable } = require("node:stream");
 const tar = require("tar");
 const { spawn } = require("node:child_process");
@@ -99,12 +99,37 @@ async function runCommand(command, args, options) {
 }
 
 /**
- * Creates an archive from the given path and name.
- * @param {string} path the path of the archive
- * @param {string} name the name of the archive
+ * The headers of the Ghostscript API, the ones installed by make install-so
+ * (base/unix-dll.mak), relative to the ghostpdl folder.
  */
-async function createArchive(path, name) {
-  tar.create({ gzip: true }, [path]).pipe(createWriteStream(name));
+const apiHeaders = [
+  "psi/iapi.h",
+  "psi/ierrors.h",
+  "base/gserrors.h",
+  "devices/gdevdsp.h",
+];
+
+/**
+ * Copies the headers of the Ghostscript API to ghostpdl/include and archives
+ * that folder together with ghostpdl/bin, which contains the library.
+ *
+ * @param {string} ghostpdlFolder - The folder containing the ghostpdl sources.
+ * @param {string} name - The name of the archive.
+ * @return {Promise<void>} A promise that resolves when the archive is written.
+ */
+async function createArchive(ghostpdlFolder, name) {
+  const includeFolder = path.join(ghostpdlFolder, "include");
+  await mkdir(includeFolder, { recursive: true });
+  for (const header of apiHeaders) {
+    await copyFile(
+      path.join(ghostpdlFolder, header),
+      path.join(includeFolder, path.basename(header))
+    );
+  }
+  await tar.create({ gzip: true, file: name }, [
+    path.join(ghostpdlFolder, "bin"),
+    includeFolder,
+  ]);
 }
 
 /**
@@ -252,10 +277,7 @@ async function buildWithZig(target, ghostpdlFolder) {
     [`-j${os.availableParallelism()}`, `AR=${tools.AR}`, "libgs"],
     { cwd: ghostpdlFolder }
   );
-  await createArchive(
-    path.join(ghostpdlFolder, "bin"),
-    `gs-${packageName}.tar.gz`
-  );
+  await createArchive(ghostpdlFolder, `gs-${packageName}.tar.gz`);
 }
 
 /**
@@ -355,10 +377,7 @@ async function main() {
           ["-f", "psi\\msvc32.mak", `${selArch}=`, "DEVSTUDIO=", "bsc"],
           { cwd: ghostpdlFolder }
         );
-        await createArchive(
-          path.join(ghostpdlFolder, "bin"),
-          `gs-win32-${targetArch}.tar.gz`
-        );
+        await createArchive(ghostpdlFolder, `gs-win32-${targetArch}.tar.gz`);
         break;
       case "linux":
       case "darwin":
@@ -374,7 +393,7 @@ async function main() {
         await runCommand("sh", args, { cwd: ghostpdlFolder });
         await runCommand("make", ["libgs"], { cwd: ghostpdlFolder });
         await createArchive(
-          path.join(ghostpdlFolder, "bin"),
+          ghostpdlFolder,
           `gs-${targetPlatform}-${targetArch}.tar.gz`
         );
         break;
