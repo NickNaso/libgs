@@ -75,9 +75,9 @@ or you can do npm install <package-name> es. `npm install @libgs/win32-x64`
 
 The npm packages contain the libraries, in their `lib` directory, and the
 headers of the Ghostscript API (`iapi.h`, `ierrors.h`, `gserrors.h` and
-`gdevdsp.h`), in their `include` directory, and have no install scripts. Like [esbuild][]'s platform packages, they declare their
-`os`, `cpu` and `libc`, so npm only installs the package matching the
-system.
+`gdevdsp.h`), in their `include` directory, and have no install scripts.
+Platform packages declare their `os`, `cpu` and `libc`, so npm only 
+installs the package matching the system.
 
 ### Create the npm packages
 
@@ -128,7 +128,352 @@ builds for the architecture of the compiler on the `PATH`.
 
 ## Usage
 
-// Describe how to use one of the package
+Each package contains Ghostscript built for one platform, to be used from C,
+C++ or a Node.js native addon through the [Ghostscript API][]:
+
+| Platform               | `lib`                                                         | Link with                         |
+| ---------------------- | ------------------------------------------------------------- | --------------------------------- |
+| Linux, FreeBSD         | `gs.a`, a static library                                      | `gs.a -lm -ldl -lpthread`         |
+| macOS                  | `gs.a`, a static library                                      | `gs.a -lm -ldl -lpthread -liconv` |
+| Windows x64 and arm64  | `gsdll64.dll` and its import library `gsdll64.lib`            | `gsdll64.lib`, ship `gsdll64.dll` |
+| Windows x86            | `gsdll32.dll` and its import library `gsdll32.lib`            | `gsdll32.lib`, ship `gsdll32.dll` |
+
+The Windows packages also contain the DLLs of GhostPCL (`gpcl6dll`), GhostXPS
+(`gxpsdll`), GhostPDF (`gpdfdll`) and GhostPDL (`gpdldll`). The static
+libraries are self-contained: they do not depend on X11, CUPS, fontconfig or
+other libraries of the system, and they are built without the OCR devices,
+which need Tesseract and a C++ runtime.
+
+The `include` directory contains the headers of the API: `iapi.h` (the
+functions), `ierrors.h` and `gserrors.h` (the error codes) and `gdevdsp.h`
+(the display device).
+
+### Install the package of the platform
+
+Add every package to the `optionalDependencies`: npm only installs the one
+matching the `os`, `cpu` and `libc` of the system and skips the others.
+
+```json
+{
+  "optionalDependencies": {
+    "@libgs/darwin-aarch64": "x.y.z",
+    "@libgs/darwin-x64": "x.y.z",
+    "@libgs/freebsd-x64": "x.y.z",
+    "@libgs/linux-arm64": "x.y.z",
+    "@libgs/linux-x64": "x.y.z",
+    "@libgs/linux-musl-x64": "x.y.z",
+    "@libgs/win32-arm64": "x.y.z",
+    "@libgs/win32-x64": "x.y.z",
+    "@libgs/win32-x86": "x.y.z"
+  }
+}
+```
+
+and so on for the other [packages](#packages).
+
+The armv6 and armv7 packages both declare the `arm` cpu, as npm cannot tell
+the two apart, so npm installs both on 32-bit ARM Linux: choose the one to
+use with `process.config.variables.arm_version`, as the function below does.
+
+### Find the library
+
+Each package exports an object with the directory of the libraries, their
+names, the directory of the headers and their names:
+
+```js
+const { path, files, include, headers } = require("@libgs/linux-x64");
+// path:    /…/node_modules/@libgs/linux-x64/lib
+// files:   ["gs.a"]
+// include: /…/node_modules/@libgs/linux-x64/include
+// headers: ["gdevdsp.h", "gserrors.h", "iapi.h", "ierrors.h"]
+```
+
+The package names keep some historical architecture names, which differ from
+`process.arch`. This function gives the name of the package for the running
+system:
+
+```js
+function libgsPackage() {
+  const { platform, arch } = process;
+  switch (platform) {
+    case "darwin":
+      return `@libgs/darwin-${arch === "arm64" ? "aarch64" : arch}`;
+    case "win32":
+      return `@libgs/win32-${arch === "ia32" ? "x86" : arch}`;
+    case "freebsd":
+      return `@libgs/freebsd-${arch}`;
+    case "linux": {
+      const musl = !process.report.getReport().header.glibcVersionRuntime;
+      const cpu =
+        arch === "arm" ? `armv${process.config.variables.arm_version}` : arch;
+      return `@libgs/linux-${musl ? "musl-" : ""}${cpu}`;
+    }
+    default:
+      throw new Error(`libgs is not available for ${platform}-${arch}`);
+  }
+}
+```
+
+### Use it in a native addon
+
+A native addon is a shared library (the `.node` file) that links libgs:
+
+- on Linux, macOS and FreeBSD it links `gs.a` and the system libraries of the
+  [table above](#usage), so the addon contains Ghostscript;
+- on Windows it links the import library and needs the DLL next to the
+  `.node` file, where Windows looks for it when loading the addon. Define
+  `_Windows` too: it makes `iapi.h` declare the functions `__stdcall`, as the
+  DLL exports them. It matters on x86, where calling them with another
+  convention corrupts the stack; including `windows.h` before `iapi.h`
+  defines it as well.
+
+This addon, saved as `src/addon.c`, exports the revision of Ghostscript
+(`10080` for 10.08.0) and is built below with [node-gyp][], [cmake-js][] and
+[Marmotta][]:
+
+```c
+#include <node_api.h>
+#include "iapi.h"
+
+static napi_value Revision(napi_env env, napi_callback_info info)
+{
+    gsapi_revision_t revision;
+    napi_value result;
+    if (gsapi_revision(&revision, sizeof(revision)) != 0) {
+        napi_throw_error(env, NULL, "gsapi_revision failed");
+        return NULL;
+    }
+    napi_create_int32(env, (int32_t)revision.revision, &result);
+    return result;
+}
+
+static napi_value Init(napi_env env, napi_value exports)
+{
+    napi_value fn;
+    napi_create_function(env, "revision", NAPI_AUTO_LENGTH, Revision, NULL, &fn);
+    napi_set_named_property(env, exports, "revision", fn);
+    return exports;
+}
+
+NAPI_MODULE(NODE_GYP_MODULE_NAME, Init)
+```
+
+#### node-gyp
+
+`binding.gyp` gets the paths from a small script. Save it as `libgs.js` in the
+root of the project, with the `libgsPackage` function above:
+
+```js
+"use strict";
+const path = require("node:path");
+
+// function libgsPackage() { ... }
+
+const { path: lib, files, include } = require(libgsPackage());
+// gs.a, or the import library of gsdll32.dll or gsdll64.dll on Windows.
+const library = files.find((file) => /^(gs\.a|gsdll(32|64)\.lib)$/.test(file));
+const output = {
+  include,
+  library: path.join(lib, library),
+  dll: library.endsWith(".lib")
+    ? path.join(lib, library.replace(/\.lib$/, ".dll"))
+    : "",
+};
+console.log(output[process.argv[2]]);
+```
+
+```json
+{
+  "targets": [
+    {
+      "target_name": "addon",
+      "sources": ["src/addon.c"],
+      "include_dirs": ["<!(node libgs.js include)"],
+      "libraries": ["<!(node libgs.js library)"],
+      "conditions": [
+        ["OS != 'win'", { "libraries": ["-lm", "-ldl", "-lpthread"] }],
+        ["OS == 'mac'", { "libraries": ["-liconv"] }],
+        ["OS == 'win'", {
+          "defines": ["_Windows"],
+          "copies": [{
+            "destination": "<(PRODUCT_DIR)",
+            "files": ["<!(node libgs.js dll)"]
+          }]
+        }]
+      ]
+    }
+  ]
+}
+```
+
+#### cmake-js
+
+`CMakeLists.txt` gets the paths from the same `libgs.js` script:
+
+```cmake
+cmake_minimum_required(VERSION 3.15...3.31)
+project(addon)
+
+add_compile_definitions(NAPI_VERSION=8)
+
+add_library(${PROJECT_NAME} SHARED src/addon.c ${CMAKE_JS_SRC})
+set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_JS_INC})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${CMAKE_JS_LIB})
+
+# Runs libgs.js to get a path of libgs.
+function(libgs_path name output)
+  execute_process(
+    COMMAND node libgs.js ${name}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    OUTPUT_VARIABLE value
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    RESULT_VARIABLE result)
+  if(NOT result EQUAL 0)
+    message(FATAL_ERROR "node libgs.js ${name} failed")
+  endif()
+  file(TO_CMAKE_PATH "${value}" value)
+  set(${output} "${value}" PARENT_SCOPE)
+endfunction()
+
+libgs_path(include LIBGS_INCLUDE)
+libgs_path(library LIBGS_LIBRARY)
+target_include_directories(${PROJECT_NAME} PRIVATE ${LIBGS_INCLUDE})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBGS_LIBRARY})
+
+if(WIN32)
+  libgs_path(dll LIBGS_DLL)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE _Windows)
+  add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LIBGS_DLL}
+            $<TARGET_FILE_DIR:${PROJECT_NAME}>)
+else()
+  target_link_libraries(${PROJECT_NAME} PRIVATE m dl pthread)
+  if(APPLE)
+    target_link_libraries(${PROJECT_NAME} PRIVATE iconv)
+  endif()
+endif()
+
+if(MSVC AND CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)
+  # Generate node.lib
+  execute_process(COMMAND ${CMAKE_AR} /def:${CMAKE_JS_NODELIB_DEF}
+                  /out:${CMAKE_JS_NODELIB_TARGET} ${CMAKE_STATIC_LINKER_FLAGS})
+endif()
+```
+
+`npx cmake-js compile` builds `build/Release/addon.node`, and on Windows copies
+the DLL next to it.
+
+#### Marmotta
+
+[Marmotta][] builds the addon with Zig and reads its configuration from
+`marmotta.config.js`, which can compute the paths itself. Add the
+`libgsPackage` function above to it:
+
+```js
+"use strict";
+const fs = require("node:fs");
+const path = require("node:path");
+
+// function libgsPackage() { ... }
+
+module.exports = ({ directory, target, platform }) => {
+  const windows = target ? target.includes("windows") : platform === "win32";
+  const macos = target ? target.includes("macos") : platform === "darwin";
+  const { path: lib, files, include } = require(libgsPackage());
+  // gs.a, or the import library of gsdll32.dll or gsdll64.dll on Windows.
+  const library = files.find((file) => /^(gs\.a|gsdll(32|64)\.lib)$/.test(file));
+  const outputDir = path.join(directory, "build");
+  if (windows) {
+    // Windows looks for the DLL next to the addon.
+    const dll = library.replace(/\.lib$/, ".dll");
+    fs.mkdirSync(outputDir, { recursive: true });
+    fs.copyFileSync(path.join(lib, dll), path.join(outputDir, dll));
+  }
+  return {
+    name: "addon",
+    sources: ["src/addon.c"],
+    includeDirs: [include],
+    cFlags: windows ? ["-D_Windows"] : [],
+    linkerFlags: [
+      path.join(lib, library),
+      ...(windows ? [] : ["-lm", "-ldl", "-lpthread"]),
+      ...(macos ? ["-liconv"] : []),
+    ],
+    outputDir,
+  };
+};
+```
+
+```sh
+npx marmotta build
+node -e "console.log(require('./build/addon.node').revision())"   # 10080
+```
+
+`libgsPackage` gives the package of the system running Marmotta: to
+cross-compile with `--target`, require the package of the target instead,
+e.g. `@libgs/linux-arm64` for `--target aarch64-linux-gnu`. On Windows, Zig
+uses the MinGW ABI, with which `iapi.h` declares the functions without
+`__stdcall` even when `_Windows` is defined: Windows x86 cannot be built with
+Marmotta, while x64 and arm64 have a single calling convention and work. On
+macOS, `-liconv` needs the macOS SDK (the Xcode Command Line Tools), which
+Zig uses to find the system libraries.
+
+### Call Ghostscript
+
+This program converts a PDF into PNG images, like
+`gs -sDEVICE=png16m -o page-%d.png input.pdf`:
+
+```c
+#include <stdio.h>
+#include "iapi.h"
+#include "ierrors.h"
+
+int main(void)
+{
+    void *instance = NULL;
+    char *args[] = {
+        "gs", "-dSAFER", "-dBATCH", "-dNOPAUSE", "-dQUIET",
+        "-sDEVICE=png16m", "-r150", "-o", "page-%d.png", "input.pdf"
+    };
+    int code = gsapi_new_instance(&instance, NULL);
+    if (code < 0) {
+        fprintf(stderr, "gsapi_new_instance failed: %d\n", code);
+        return 1;
+    }
+    gsapi_set_arg_encoding(instance, GS_ARG_ENCODING_UTF8);
+    code = gsapi_init_with_args(instance, sizeof(args) / sizeof(args[0]), args);
+    int exit_code = gsapi_exit(instance);
+    if (code == 0 || code == gs_error_Quit)
+        code = exit_code;
+    gsapi_delete_instance(instance);
+    if (code != 0 && code != gs_error_Quit) {
+        fprintf(stderr, "Ghostscript failed: %d\n", code);
+        return 1;
+    }
+    return 0;
+}
+```
+
+Build it on Linux, macOS or FreeBSD with:
+
+```sh
+LIBGS=node_modules/@libgs/linux-x64
+cc main.c -I "$LIBGS/include" "$LIBGS/lib/gs.a" -lm -ldl -lpthread -o pdf2png
+```
+
+adding `-liconv` on macOS, where iconv is not part of the C library, and on
+Windows, in a Visual Studio developer prompt, with:
+
+```bat
+set LIBGS=node_modules\@libgs\win32-x64
+cl /D_Windows main.c /I "%LIBGS%\include" "%LIBGS%\lib\gsdll64.lib"
+copy "%LIBGS%\lib\gsdll64.dll" .
+```
+
+An instance is not thread-safe: use each one from a single thread, or create
+one instance per thread. The fonts and the PostScript resources are built into
+the library, so no other file is needed at run time.
 
 
 <a name="team"></a>
@@ -161,7 +506,10 @@ Licensed under [Apache license V2](./LICENSE)
 
 [release]: https://github.com/NickNaso/libgs/releases
 [Zig]: https://ziglang.org/download/
-[esbuild]: https://esbuild.github.io/getting-started/#install-esbuild
+[node-gyp]: https://github.com/nodejs/node-gyp
+[cmake-js]: https://github.com/cmake-js/cmake-js
+[Marmotta]: https://github.com/napi-bindings/marmotta
+[Ghostscript API]: https://ghostscript.readthedocs.io/en/latest/API.html
 [Node.js platforms]: https://github.com/nodejs/node/blob/main/BUILDING.md#platform-list
 [@libgs]: https://www.npmjs.com/org/libgs
 [@libgs/darwin-aarch64]: https://www.npmjs.com/package/@libgs/darwin-aarch64

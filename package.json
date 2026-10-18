@@ -1,6 +1,6 @@
 {
   "name": "libgs",
-  "version": "0.0.1",
+  "version": "0.16.0",
   "description": "Build for GhostScript",
   "keywords": [
     "ghostscript",
@@ -30,7 +30,7 @@
     },
     {
       "name": "Simone Russo",
-      "email": "zucchinaberg69@gmail.com"
+      "email": "s.russo06@icloud.com"
     }
   ],
   "license": "Apache-2.0",

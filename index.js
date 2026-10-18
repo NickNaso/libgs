@@ -277,10 +277,14 @@ async function createZigWrappers(zigTarget, zigFlags, directoryPath) {
   ].join("\n");
   // zig cc enables UBSan on unoptimized code: the objects would reference
   // __ubsan_* symbols that consumers of the static library cannot resolve.
+  // The library is linked into Node.js addons, which are shared libraries:
+  // zig cc produces position-independent code by default only for glibc,
+  // not for musl or FreeBSD.
   const targetFlags = ["-target", zigTarget, ...zigFlags].join(" ");
+  const ccFlags = `${targetFlags} -fno-sanitize=undefined -fPIC`;
   const scripts = {
-    CC: `${translateArgs}\nexec zig cc ${targetFlags} -fno-sanitize=undefined "$@"`,
-    CXX: `${translateArgs}\nexec zig c++ ${targetFlags} -fno-sanitize=undefined "$@"`,
+    CC: `${translateArgs}\nexec zig cc ${ccFlags} "$@"`,
+    CXX: `${translateArgs}\nexec zig c++ ${ccFlags} "$@"`,
     AR: "exec zig ar \"$@\"",
     RANLIB: "exec zig ranlib \"$@\"",
     LD: "exec zig ld.lld \"$@\"",
