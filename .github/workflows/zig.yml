@@ -1,0 +1,162 @@
+name: 'Build for Linux and FreeBSD with Zig'
+on:
+    workflow_call:
+    workflow_dispatch:
+
+# The targets are the Linux and FreeBSD platforms of Node.js (BUILDING.md in
+# nodejs/node), with the minimum glibc version Node.js requires, plus musl on
+# 32-bit ARM and armv6 (Raspberry Pi 1 and Zero).
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                  - target: x86_64-linux-gnu.2.34
+                    machine: Advanced Micro Devices X86-64
+                    docker-platform: linux/amd64
+                    image: debian:trixie
+                  - target: aarch64-linux-gnu.2.34
+                    machine: AArch64
+                    docker-platform: linux/arm64
+                    image: debian:trixie
+                  - target: armv7-linux-gnueabihf.2.28
+                    machine: ARM
+                    docker-platform: linux/arm/v7
+                    image: debian:trixie
+                  # Debian has no armv6 port, but its armv7 one runs armv6 code.
+                  - target: armv6-linux-gnueabihf.2.28
+                    machine: ARM
+                    docker-platform: linux/arm/v7
+                    image: debian:trixie
+                  - target: x86-linux-gnu.2.17
+                    machine: Intel 80386
+                    docker-platform: linux/386
+                    image: debian:trixie
+                  - target: powerpc64le-linux-gnu.2.34
+                    machine: PowerPC64
+                    docker-platform: linux/ppc64le
+                    image: debian:trixie
+                  - target: s390x-linux-gnu.2.34
+                    machine: IBM S/390
+                    docker-platform: linux/s390x
+                    image: debian:trixie
+                  - target: riscv64-linux-gnu.2.36
+                    machine: RISC-V
+                    docker-platform: linux/riscv64
+                    image: debian:trixie
+                  # There is no official loong64 image to run the smoke test.
+                  - target: loongarch64-linux-gnu.2.36
+                    machine: LoongArch
+                  - target: x86_64-linux-musl
+                    machine: Advanced Micro Devices X86-64
+                    docker-platform: linux/amd64
+                    image: alpine:3.20
+                  - target: aarch64-linux-musl
+                    machine: AArch64
+                    docker-platform: linux/arm64
+                    image: alpine:3.20
+                  - target: armv7-linux-musleabihf
+                    machine: ARM
+                    docker-platform: linux/arm/v7
+                    image: alpine:3.20
+                  - target: armv6-linux-musleabihf
+                    machine: ARM
+                    docker-platform: linux/arm/v6
+                    image: alpine:3.20
+                  # The smoke test runs in the smoke-freebsd job.
+                  - target: x86_64-freebsd
+                    machine: Advanced Micro Devices X86-64
+                    vm: freebsd
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Install Node.js 20.x
+              uses: actions/setup-node@v4
+              with:
+                node-version: 20.x
+                cache: 'npm'
+                cache-dependency-path: package.json
+
+            - name: Install Zig
+              uses: mlugg/setup-zig@v2
+              with:
+                version: 0.16.0
+
+            - name: Install Node.js modules ...
+              run: npm install
+
+            - name: Environment information
+              run: |
+                npx envinfo
+                zig version
+
+            - name: Build
+              run: node index.js -z ${{ matrix.target }}
+
+            # Links an executable against the static library, to check that
+            # gs.a is complete and runs on the target.
+            - name: Build test executable
+              run: |
+                make -C ghostpdl libgsexe
+                file ghostpdl/bin/gs_aexe
+
+            - name: Check the architecture of gs.a
+              run: |
+                readelf -h ghostpdl/bin/gs.a | sed -n 's/^ *Machine: *//p' | sort -u > machines.txt
+                cat machines.txt
+                test "$(cat machines.txt)" = "${{ matrix.machine }}"
+
+            - name: Set up QEMU
+              if: matrix.image
+              uses: docker/setup-qemu-action@v3
+
+            - name: Smoke test on ${{ matrix.image }} (${{ matrix.docker-platform }})
+              if: matrix.image
+              run: |
+                docker run --rm --platform ${{ matrix.docker-platform }} \
+                  -v "$PWD/ghostpdl:/gs" -w /gs ${{ matrix.image }} sh -ec '
+                    uname -m
+                    test "$(./bin/gs_aexe -q -dNODISPLAY -dBATCH -dNOPAUSE -c "3 4 add == quit")" = 7
+                    ./bin/gs_aexe -q -dBATCH -dNOPAUSE -sDEVICE=png16m -o tiger.png examples/tiger.eps
+                    test -s tiger.png
+                  '
+
+            - name: Upload the test executable
+              if: matrix.vm
+              uses: actions/upload-artifact@v4
+              with:
+                name: smoke-${{ matrix.target }}
+                path: |
+                  ghostpdl/bin/gs_aexe
+                  ghostpdl/examples/tiger.eps
+                if-no-files-found: error
+
+            - name: Upload build Artifact
+              uses: actions/upload-artifact@v4
+              with:
+                name: gs-${{ matrix.target }}
+                path: ./gs-*.tar.gz
+                if-no-files-found: error
+
+    smoke-freebsd:
+        needs: build
+        runs-on: ubuntu-latest
+        steps:
+            - name: Download the test executable
+              uses: actions/download-artifact@v4
+              with:
+                name: smoke-x86_64-freebsd
+
+            - name: Smoke test on FreeBSD
+              uses: vmactions/freebsd-vm@v1
+              with:
+                usesh: true
+                run: |
+                  uname -a
+                  chmod +x bin/gs_aexe
+                  test "$(./bin/gs_aexe -q -dNODISPLAY -dBATCH -dNOPAUSE -c "3 4 add == quit")" = 7
+                  ./bin/gs_aexe -q -dBATCH -dNOPAUSE -sDEVICE=png16m -o tiger.png examples/tiger.eps
+                  test -s tiger.png

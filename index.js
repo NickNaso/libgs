@@ -169,13 +169,51 @@ const zigArchs = new Map([
   ["riscv64", { host: "riscv64", npm: "riscv64" }],
   ["powerpc64le", { host: "powerpc64le", npm: "ppc64" }],
   ["s390x", { host: "s390x", npm: "s390x" }],
-  ["loongarch64", { host: "loongarch64", npm: "loong64" }],
+  // Zig's loongarch64 baseline includes LSX, which makes libpng call its LSX
+  // filters: ghostpdl does not build them (base/png.mak disables the Intel
+  // and ARM ones in the same way).
+  [
+    "loongarch64",
+    { host: "loongarch64", npm: "loong64", cflags: ["-DPNG_LOONGARCH_LSX_OPT=0"] },
+  ],
 ]);
 
 /**
- * Parses a Zig target triple, e.g. aarch64-linux-musl or x86_64-linux-gnu.2.17.
- * The armv6 and armv7 architectures are also accepted, e.g.
- * armv6-linux-musleabihf.
+ * The nmake macros selecting each Windows architecture. psi\msvc32.mak only
+ * selects the word size (WIN32 or WIN64): the instruction set is the one of
+ * the compiler on the PATH, so the build must run in a Visual Studio
+ * environment of the same architecture (e.g. vcvarsall amd64_x86 for x86).
+ */
+const windowsArchs = new Map([
+  ["x64", ["WIN64="]],
+  ["x86", ["WIN32="]],
+  // ARM64 has the same data model as x64 (LLP64), but the makefiles assume
+  // the x86 SIMD extensions: SSE2 (base/msvcver.mak, which offers
+  // DONT_HAVE_SSE2) and those of CAL and Tesseract (psi/msvc.mak). Their code
+  // is disabled without them, and Tesseract detects the CPU features at run
+  // time.
+  [
+    "arm64",
+    [
+      "WIN64=",
+      "DONT_HAVE_SSE2=",
+      "CAL_CFLAGS=",
+      "TESSCXXFLAGS=/EHsc /std:c++17 /utf-8 /wd4244 /wd4305",
+    ],
+  ],
+]);
+
+/**
+ * base/msvcver.mak recognises Visual Studio up to 2022 (version 17) and
+ * otherwise falls back to the flags of Visual C++ 6: newer versions, such as
+ * Visual Studio 2026 (18) on the GitHub runners, are built as 2022.
+ */
+const msvcVersion = "MSVC_VERSION=17";
+
+/**
+ * Parses a Zig target triple, e.g. aarch64-linux-musl, x86_64-linux-gnu.2.17
+ * or x86_64-freebsd. The armv6 and armv7 architectures are also accepted,
+ * e.g. armv6-linux-musleabihf.
  *
  * @param {string} target - The Zig target triple.
  * @return {{zigTarget: string, zigFlags: string[], host: string, packageName: string}}
@@ -183,20 +221,31 @@ const zigArchs = new Map([
  * @throws {Error} If the target is not supported.
  */
 function parseZigTarget(target) {
-  // The optional glibc version suffix (".2.17") is only meaningful to Zig.
+  // The optional version suffix of the libc (".2.17") or of the operating
+  // system (x86_64-freebsd.14.0) is only meaningful to Zig.
   const [arch, platform, abi = ""] = target.split(".")[0].split("-");
   const archNames = zigArchs.get(arch);
-  if (!archNames || platform !== "linux" || !/^(gnu|musl)/.test(abi)) {
+  let host;
+  let packagePlatform;
+  if (archNames && platform === "linux" && /^(gnu|musl)/.test(abi)) {
+    host = `${archNames.host}-unknown-linux-${abi}`;
+    packagePlatform = abi.startsWith("musl") ? "linux-musl" : "linux";
+  } else if (archNames && platform === "freebsd" && abi === "") {
+    host = `${archNames.host}-unknown-freebsd`;
+    packagePlatform = "freebsd";
+  } else {
     throw new Error(`Unsupported Zig target: ${target}`);
   }
-  const libc = abi.startsWith("musl") ? "linux-musl" : "linux";
   return {
     zigTarget: archNames.zig
       ? target.replace(arch, archNames.zig)
       : target,
-    zigFlags: archNames.mcpu ? [`-mcpu=${archNames.mcpu}`] : [],
-    host: `${archNames.host}-unknown-linux-${abi}`,
-    packageName: `${libc}-${archNames.npm}`,
+    zigFlags: [
+      ...(archNames.mcpu ? [`-mcpu=${archNames.mcpu}`] : []),
+      ...(archNames.cflags ?? []),
+    ],
+    host,
+    packageName: `${packagePlatform}-${archNames.npm}`,
   };
 }
 
@@ -354,31 +403,25 @@ async function main() {
         process.stdout.write(`Building for ${values.zig} with Zig\n`);
         await buildWithZig(values.zig, ghostpdlFolder);
         break;
-      case "windows":
+      case "windows": {
         process.stdout.write("Building\n");
-        const selArch =
-          targetArch === "x64"
-            ? "WIN64"
-            : targetArch === "x86"
-            ? "WIN32"
-            : "ARM64";
-        await runCommand(
-          "nmake",
-          ["-f", "psi\\msvc32.mak", `${selArch}=`, "DEVSTUDIO=", "clean"],
-          { cwd: ghostpdlFolder }
-        );
-        await runCommand(
-          "nmake",
-          ["-f", "psi\\msvc32.mak", `${selArch}=`, "SBR=1", "DEVSTUDIO="],
-          { cwd: ghostpdlFolder }
-        );
-        await runCommand(
-          "nmake",
-          ["-f", "psi\\msvc32.mak", `${selArch}=`, "DEVSTUDIO=", "bsc"],
-          { cwd: ghostpdlFolder }
-        );
+        const nmakeArchs = windowsArchs.get(targetArch);
+        if (!nmakeArchs) {
+          throw new Error(`Unsupported Windows architecture: ${targetArch}`);
+        }
+        const nmake = [
+          "-f",
+          "psi\\msvc32.mak",
+          ...nmakeArchs,
+          msvcVersion,
+          "DEVSTUDIO=",
+        ];
+        await runCommand("nmake", [...nmake, "clean"], { cwd: ghostpdlFolder });
+        await runCommand("nmake", [...nmake, "SBR=1"], { cwd: ghostpdlFolder });
+        await runCommand("nmake", [...nmake, "bsc"], { cwd: ghostpdlFolder });
         await createArchive(ghostpdlFolder, `gs-win32-${targetArch}.tar.gz`);
         break;
+      }
       case "linux":
       case "darwin":
         process.stdout.write("Building\n");

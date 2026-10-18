@@ -5,11 +5,28 @@ jobs:
     build:
       runs-on: ${{ matrix.os }}
       strategy:
-
+          fail-fast: false
           matrix:
-              os: [windows-latest]
-              architecture: [x64, x86]
               node-version: [20.x]
+              # The include entries extend the combination with the same
+              # architecture: without this key they would all be merged into
+              # the only node-version combination, the last one winning.
+              architecture: [x64, x86, arm64]
+              # psi\msvc32.mak builds for the architecture of the compiler on
+              # the PATH, set by msvc-arch.
+              include:
+                - architecture: x64
+                  os: windows-latest
+                  msvc-arch: x64
+                  machine: x64
+                - architecture: x86
+                  os: windows-latest
+                  msvc-arch: amd64_x86
+                  machine: x86
+                - architecture: arm64
+                  os: windows-11-arm
+                  msvc-arch: arm64
+                  machine: ARM64
       steps:
           - name: Checkout
             uses: actions/checkout@v4
@@ -37,6 +54,8 @@ jobs:
 
           - name: Install Visual Studio
             uses: ilammy/msvc-dev-cmd@v1
+            with:
+              arch: ${{ matrix.msvc-arch }}
 
           - name: Environment information
             run: npx envinfo
@@ -45,8 +64,20 @@ jobs:
             run: | 
               node index.js -p windows -a ${{ matrix.architecture }}
 
+          - name: Check the architecture of the libraries
+            shell: pwsh
+            run: |
+              foreach ($dll in Get-ChildItem ghostpdl\bin\*.dll) {
+                $machine = dumpbin /headers $dll.FullName | Select-String ' machine \('
+                "$($dll.Name): $machine"
+                if ("$machine" -notmatch '\(${{ matrix.machine }}\)') {
+                  throw "$($dll.Name) is not built for ${{ matrix.machine }}"
+                }
+              }
+
           - name: Upload build Artifact
             uses: actions/upload-artifact@v4
             with:
               name: gs-win32-${{ matrix.architecture }}.tar.gz
               path: ./gs-win32-${{ matrix.architecture }}.tar.gz
+              if-no-files-found: error

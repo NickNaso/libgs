@@ -4,6 +4,11 @@ on: [workflow_call]
 jobs:
     build:
       runs-on: ${{ matrix.os }}
+      env:
+        # The oldest macOS version supported by Node.js, instead of the one
+        # of the runner, so that linking the library does not require a newer
+        # deployment target.
+        MACOSX_DEPLOYMENT_TARGET: "13.5"
       strategy:
           fail-fast: false
           matrix:

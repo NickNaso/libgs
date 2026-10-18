@@ -8,12 +8,9 @@ jobs:
   build:
     uses: ./.github/workflows/test.yml
 
-  build-zig:
-    uses: ./.github/workflows/linux-zig.yml
-
   # makePackages.js creates the npm packages from these archives.
   publish:
-    needs: [build, build-zig]
+    needs: [build]
     runs-on: ubuntu-latest
     permissions:
       contents: write
