@@ -36,6 +36,7 @@ const platformFields = new Map([
 // Only the libraries are published: the archives also contain executables
 // and, for shared libraries, symbolic links, which npm does not pack.
 const libraryPattern = /\.(a|lib|dll|dylib)$|\.so(\.\d+)*$/;
+const headerPattern = /\.h$/;
 
 /**
  * Gets a release of the repository from the GitHub API.
@@ -91,30 +92,36 @@ async function downloadAsset(asset, filePath) {
 }
 
 /**
- * Extracts the libraries in ghostpdl/bin of an archive built by index.js.
+ * Extracts the files of a ghostpdl folder of an archive built by index.js:
+ * the libraries are in ghostpdl/bin and the headers in ghostpdl/include.
  *
  * @param {string} archivePath - The path of the .tar.gz archive.
- * @param {string} destinationPath - The directory where the libraries will be saved.
- * @return {Promise<string[]>} A promise that resolves with the names of the extracted libraries.
- * @throws {Error} If the archive contains no library.
+ * @param {string} folder - The folder in ghostpdl, e.g. bin.
+ * @param {RegExp} pattern - The pattern of the names of the files to extract.
+ * @param {string} destinationPath - The directory where the files will be saved.
+ * @return {Promise<string[]>} A promise that resolves with the names of the extracted files.
+ * @throws {Error} If the folder contains no matching file.
  */
-async function extractLibraries(archivePath, destinationPath) {
+async function extractFiles(archivePath, folder, pattern, destinationPath) {
   const files = [];
+  const entryPattern = new RegExp(`^(?:\\./)?ghostpdl/${folder}/([^/]+)$`);
   await fs.mkdir(destinationPath, { recursive: true });
   await tar.x({
     file: archivePath,
     cwd: destinationPath,
     strip: 2,
     filter: (entryPath, entry) => {
-      const match = /^(?:\.\/)?ghostpdl\/bin\/([^/]+)$/.exec(entryPath);
+      const match = entryPattern.exec(entryPath);
       const keep =
-        entry.type === "File" && match !== null && libraryPattern.test(match[1]);
+        entry.type === "File" && match !== null && pattern.test(match[1]);
       if (keep) files.push(match[1]);
       return keep;
     },
   });
   if (files.length === 0) {
-    throw new Error(`${path.basename(archivePath)} contains no library`);
+    throw new Error(
+      `${path.basename(archivePath)} has no file matching ${pattern} in ghostpdl/${folder}`
+    );
   }
   return files.sort();
 }
@@ -129,9 +136,17 @@ async function extractLibraries(archivePath, destinationPath) {
  * @param {string} arch - The architecture in the package name.
  * @param {string} version - The version of the package.
  * @param {string[]} files - The names of the libraries in the lib directory.
+ * @param {string[]} headers - The names of the headers in the include directory.
  * @return {Promise<void>} A promise that resolves when the files are written.
  */
-async function writePackageFiles(packageDir, platform, arch, version, files) {
+async function writePackageFiles(
+  packageDir,
+  platform,
+  arch,
+  version,
+  files,
+  headers
+) {
   const packageJson = {
     name: `@libgs/${platform}-${arch}`,
     version,
@@ -141,7 +156,7 @@ async function writePackageFiles(packageDir, platform, arch, version, files) {
       url: `git+https://github.com/${repository}.git`,
     },
     main: "index.js",
-    files: ["index.js", "lib"],
+    files: ["index.js", "lib", "include"],
     // Yarn Plug'n'Play leaves the libraries on disk instead of in a zip.
     preferUnplugged: true,
     ...platformFields.get(platform),
@@ -151,13 +166,15 @@ async function writePackageFiles(packageDir, platform, arch, version, files) {
 const path = require("node:path");
 
 /**
- * Gets the path to the libgs library.
- * @returns {Promise<{path: string, files: string[]}>} A promise that resolves with the directory of the libraries and their names.
+ * Gets the path to the libgs library and to its headers.
+ * @returns {Promise<{path: string, files: string[], include: string, headers: string[]}>} A promise that resolves with the directory of the libraries and their names, and the directory of the headers and their names.
  */
 module.exports = async function getLibGSPath() {
   return {
     path: path.join(__dirname, "lib"),
     files: ${JSON.stringify(files)},
+    include: path.join(__dirname, "include"),
+    headers: ${JSON.stringify(headers)},
   };
 };
 `;
@@ -214,11 +231,26 @@ async function makePackages() {
           const archivePath = path.join(downloadDir, asset.name);
           await downloadAsset(asset, archivePath);
           const packageDir = path.join(packagesDir, name);
-          const files = await extractLibraries(
+          const files = await extractFiles(
             archivePath,
+            "bin",
+            libraryPattern,
             path.join(packageDir, "lib")
           );
-          await writePackageFiles(packageDir, platform, arch, version, files);
+          const headers = await extractFiles(
+            archivePath,
+            "include",
+            headerPattern,
+            path.join(packageDir, "include")
+          );
+          await writePackageFiles(
+            packageDir,
+            platform,
+            arch,
+            version,
+            files,
+            headers
+          );
           return true;
         })
       )
