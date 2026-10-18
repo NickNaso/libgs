@@ -173,16 +173,16 @@ async function writePackageFiles(
 const path = require("node:path");
 
 /**
- * Gets the path to the libgs library and to its headers.
- * @returns {Promise<{path: string, files: string[], include: string, headers: string[]}>} A promise that resolves with the directory of the libraries and their names, and the directory of the headers and their names.
+ * The libgs library and its headers.
+ * @type {{path: string, files: string[], include: string, headers: string[]}}
+ * The directory of the libraries and their names, and the directory of the
+ * headers and their names.
  */
-module.exports = async function getLibGSPath() {
-  return {
-    path: path.join(__dirname, "lib"),
-    files: ${JSON.stringify(files)},
-    include: path.join(__dirname, "include"),
-    headers: ${JSON.stringify(headers)},
-  };
+module.exports = {
+  path: path.join(__dirname, "lib"),
+  files: ${JSON.stringify(files)},
+  include: path.join(__dirname, "include"),
+  headers: ${JSON.stringify(headers)},
 };
 `;
   await fs.writeFile(
