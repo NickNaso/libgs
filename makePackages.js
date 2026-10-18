@@ -10,11 +10,17 @@ const tar = require("tar");
 const repository = "NickNaso/libgs";
 const packagesDir = path.join(__dirname, "npm", "@libgs");
 
+// The platforms of Node.js (BUILDING.md in nodejs/node) that Ghostscript can
+// be built for, plus armv6, Raspberry Pi OS and Alpine's armhf baseline.
 const supportedPlatforms = new Map([
   ["darwin", ["aarch64", "x64"]],
-  ["linux", ["x64", "arm64", "armv6", "armv7", "riscv64"]],
+  ["freebsd", ["x64"]],
+  [
+    "linux",
+    ["x64", "arm64", "armv6", "armv7", "ia32", "ppc64", "s390x", "loong64", "riscv64"],
+  ],
   ["linux-musl", ["x64", "arm64", "armv6", "armv7"]],
-  ["win32", ["x64", "x86"]],
+  ["win32", ["x64", "x86", "arm64"]],
 ]);
 
 // The package names keep the historical architecture names, while npm
@@ -28,7 +34,8 @@ const npmArchs = new Map([
 ]);
 const platformFields = new Map([
   ["darwin", { os: ["darwin"] }],
-  ["linux", { os: ["linux"], libc: ["glibc"] }],
+  ["freebsd", { os: ["freebsd"] }],
+  ["linux",{ os: ["linux"], libc: ["glibc"] }],
   ["linux-musl", { os: ["linux"], libc: ["musl"] }],
   ["win32", { os: ["win32"] }],
 ]);

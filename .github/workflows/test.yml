@@ -6,14 +6,13 @@ jobs:
     uses: ./.github/workflows/windows.yml
   build-macos:
     uses: ./.github/workflows/macos.yml
-  build-linux:
-    uses: ./.github/workflows/linux.yml
-  build-linux-musl:
-    uses: ./.github/workflows/linux-musl.yml
+  # Linux (glibc and musl) and FreeBSD.
+  build-zig:
+    uses: ./.github/workflows/zig.yml
 
   test:
     # The artifacts only exist once the builds have finished.
-    needs: [build-windows, build-macos, build-linux, build-linux-musl]
+    needs: [build-windows, build-macos, build-zig]
     runs-on: ubuntu-latest
 
     steps:
