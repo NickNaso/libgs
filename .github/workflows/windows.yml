@@ -7,7 +7,7 @@ jobs:
       strategy:
           fail-fast: false
           matrix:
-              node-version: [20.x]
+              node-version: [24.x]
               # The include entries extend the combination with the same
               # architecture: without this key they would all be merged into
               # the only node-version combination, the last one winning.
