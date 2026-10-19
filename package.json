@@ -39,11 +39,11 @@
   },
   "homepage": "https://github.com/NickNaso/libgs#readme",
   "devDependencies": {
-    "@eslint/js": "^9.5.0",
-    "@vitest/coverage-v8": "^1.6.0",
-    "eslint": "^9.5.0",
-    "globals": "^15.6.0",
-    "vitest": "^1.6.0"
+    "@eslint/js": "^10.0.1",
+    "@vitest/coverage-v8": "^5.0.5",
+    "eslint": "^10.13.0",
+    "globals": "^17.13.0",
+    "vitest": "^5.0.5"
   },
   "dependencies": {
     "tar": "^7.2.0"
