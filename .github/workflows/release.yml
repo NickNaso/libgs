@@ -8,7 +8,7 @@ jobs:
   build:
     uses: ./.github/workflows/test.yml
 
-  # makePackages.js creates the npm packages from these archives.
+  # make.js creates the npm packages from these archives.
   publish:
     needs: [build]
     runs-on: ubuntu-latest

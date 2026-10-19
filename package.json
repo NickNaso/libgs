@@ -1,6 +1,7 @@
 {
   "name": "libgs",
   "version": "0.16.0",
+  "private": true,
   "description": "Build for GhostScript",
   "keywords": [
     "ghostscript",
@@ -11,7 +12,8 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "makePackages": "node makePackages.js",
+    "make": "node make.js",
+    "publish": "node publish.js",
     "clean": "node clean.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

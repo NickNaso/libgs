@@ -85,8 +85,8 @@ Publishing a GitHub release builds the libraries and uploads the archives,
 named `gs-<platform>-<arch>.tar.gz` after the packages, to the release. Then
 
 ```sh
-npm run makePackages                        # from the latest release
-npm run makePackages -- --tag v0.0.14       # from a given release
+npm run make                        # from the latest release
+npm run make -- --tag v0.0.14       # from a given release
 ```
 
 downloads the archives of the release, checks their size and SHA-256 digest
@@ -94,6 +94,22 @@ and creates a package in `npm/@libgs` for each archive, with the version of
 the release (`--version` sets another one). Platforms without an archive in
 the release are skipped. Set `GITHUB_TOKEN` if the GitHub API rate limit is
 reached.
+
+### Publish the npm packages
+
+```sh
+npm run publish                   # publish the packages in npm/@libgs
+npm run publish -- --dry-run      # check them without publishing
+npm run publish -- --tag next     # publish with another dist-tag
+```
+
+publishes the packages in `npm/@libgs` one at a time, with public access.
+Each `npm publish` runs in the terminal, so npm asks for the authentication
+of every package: the one-time password or the confirmation in the browser
+of the two-factor authentication. If no user is logged in, or the session
+expires, the script runs `npm login` first. The versions already on the
+registry are skipped, so after a failure the script can be run again to
+publish the remaining packages.
 
 ### Compile from source
 
