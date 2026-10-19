@@ -134,7 +134,8 @@ async function extractFiles(archivePath, folder, pattern, destinationPath) {
 }
 
 /**
- * Writes the package.json and the index.js of a platform package.
+ * Writes the package.json, the index.js and the README.md of a platform
+ * package.
  * The package has no install scripts: the libraries are already in it, and
  * npm installs only the package matching the os, cpu and libc fields.
  *
@@ -154,15 +155,17 @@ async function writePackageFiles(
   files,
   headers
 ) {
+  const description = `Ghostscript library (libgs) for ${platform} ${arch}`;
   const packageJson = {
     name: `@libgs/${platform}-${arch}`,
     version,
-    description: `Ghostscript library (libgs) for ${platform} ${arch}`,
+    description,
     repository: {
       type: "git",
       url: `git+https://github.com/${repository}.git`,
     },
     main: "index.js",
+    // npm always packs the README.md and the package.json.
     files: ["index.js", "lib", "include"],
     // Yarn Plug'n'Play leaves the libraries on disk instead of in a zip.
     preferUnplugged: true,
@@ -190,6 +193,10 @@ module.exports = {
     `${JSON.stringify(packageJson, null, 2)}\n`
   );
   await fs.writeFile(path.join(packageDir, "index.js"), indexJS);
+  await fs.writeFile(
+    path.join(packageDir, "README.md"),
+    `# libgs\n\n${description}.\n\nSee the [libgs repository](https://github.com/${repository}#readme) for how to use it.\n`
+  );
 }
 
 /**
