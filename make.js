@@ -45,6 +45,18 @@ const platformFields = new Map([
 const libraryPattern = /\.(a|lib|dll|dylib)$|\.so(\.\d+)*$/;
 const headerPattern = /\.h$/;
 
+// The keywords of every package, which also gets the ones of its architecture.
+const keywords = [
+  "nodejs",
+  "ghostscript",
+  "native",
+  "addon",
+  "pdf",
+  "eps",
+  "ps",
+  "cpp",
+];
+
 /**
  * Gets a release of the repository from the GitHub API.
  * GITHUB_TOKEN, when set, raises the rate limit of the API.
@@ -156,10 +168,14 @@ async function writePackageFiles(
   headers
 ) {
   const description = `Ghostscript library (libgs) for ${platform} ${arch}`;
+  const cpu = npmArchs.get(arch) ?? arch;
   const packageJson = {
     name: `@libgs/${platform}-${arch}`,
     version,
     description,
+    // The architecture of the package name, and the one of npm when it
+    // differs, e.g. aarch64 and arm64.
+    keywords: [...keywords, ...new Set([arch, cpu])],
     repository: {
       type: "git",
       url: `git+https://github.com/${repository}.git`,
@@ -170,7 +186,7 @@ async function writePackageFiles(
     // Yarn Plug'n'Play leaves the libraries on disk instead of in a zip.
     preferUnplugged: true,
     ...platformFields.get(platform),
-    cpu: [npmArchs.get(arch) ?? arch],
+    cpu: [cpu],
   };
   const indexJS = `"use strict";
 const path = require("node:path");
